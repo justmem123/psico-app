@@ -20,7 +20,6 @@ const ESTADOS: { value: EstadoCita; label: string; color: string; icon: React.El
 const PAGOS: { value: EstadoPago; label: string; color: string }[] = [
   { value: "pagado",    label: "Pagado",    color: "bg-emerald-100 text-emerald-700 ring-emerald-300" },
   { value: "pendiente", label: "Pendiente", color: "bg-amber-100 text-amber-700 ring-amber-300"       },
-  { value: "debe",      label: "Debe",      color: "bg-red-100 text-red-600 ring-red-300"             },
 ];
 
 const DIAS   = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
