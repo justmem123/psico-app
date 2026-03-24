@@ -12,6 +12,8 @@ export interface Paciente {
   telefono:     string;
   sesionPrecio: number;
   color?:       string;
+  dni?:         string;
+  direccion?:   string;
 }
 
 export interface Cita {
@@ -56,6 +58,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setPacientes((pacs ?? []).map(p => ({
       id: p.id, nombre: p.nombre, email: p.email ?? "",
       telefono: p.telefono ?? "", sesionPrecio: p.sesion_precio, color: p.color,
+      dni: p.dni ?? "", direccion: p.direccion ?? "",
     })));
     setCitas((cts ?? []).map(c => ({
       id: c.id, pacienteId: c.paciente_id, fecha: c.fecha,
@@ -71,9 +74,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const color = COLORES[pacientes.length % COLORES.length];
     const { data } = await supabase.from("pacientes").insert({
       nombre: p.nombre, email: p.email, telefono: p.telefono,
-      sesion_precio: p.sesionPrecio, color,
+      sesion_precio: p.sesionPrecio, color, dni: p.dni, direccion: p.direccion,
     }).select().single();
-    if (data) setPacientes(prev => [...prev, { id: data.id, nombre: data.nombre, email: data.email ?? "", telefono: data.telefono ?? "", sesionPrecio: data.sesion_precio, color: data.color }]);
+    if (data) setPacientes(prev => [...prev, {
+      id: data.id, nombre: data.nombre, email: data.email ?? "",
+      telefono: data.telefono ?? "", sesionPrecio: data.sesion_precio,
+      color: data.color, dni: data.dni ?? "", direccion: data.direccion ?? "",
+    }]);
   }
 
   async function addCita(c: Omit<Cita,"id">) {

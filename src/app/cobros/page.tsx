@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle, Clock, AlertCircle, TrendingUp, TrendingDown, FileText } from "lucide-react";
 import { useApp } from "@/lib/store";
 import type { Cita } from "@/lib/store";
@@ -28,11 +29,17 @@ function fmtFecha(f: string) {
   return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-export default function CobrosPage() {
+function CobrosContent() {
   const { citas, pacientes, marcarPagado } = useApp();
-  const [filtro,   setFiltro]   = useState<Filtro>("todos");
-  const [citaSelId, setCitaSelId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const [filtro,     setFiltro]     = useState<Filtro>("todos");
+  const [citaSelId,  setCitaSelId]  = useState<string | null>(null);
   const [facturaCita, setFacturaCita] = useState<Cita | null>(null);
+
+  useEffect(() => {
+    const f = searchParams.get("f");
+    if (f === "pagado" || f === "pendiente" || f === "debe") setFiltro(f);
+  }, [searchParams]);
 
   const getPac = (id: string) => pacientes.find(p => p.id === id);
 
@@ -225,5 +232,13 @@ export default function CobrosPage() {
       <CitaDetailModal citaId={citaSelId} onClose={() => setCitaSelId(null)} />
       {facturaCita && <FacturaModal cita={facturaCita} onClose={() => setFacturaCita(null)} />}
     </div>
+  );
+}
+
+export default function CobrosPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-slate-400 text-sm">Cargando...</div>}>
+      <CobrosContent />
+    </Suspense>
   );
 }

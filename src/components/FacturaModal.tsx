@@ -100,7 +100,9 @@ export default function FacturaModal({ cita, onClose }: Props) {
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Facturado a</p>
               <p className="font-semibold text-slate-800">{pac.nombre}</p>
-              {pac.email    && <p className="text-sm text-slate-500 mt-1">{pac.email}</p>}
+              {pac.dni      && <p className="text-sm text-slate-500 mt-1">DNI/NIE: {pac.dni}</p>}
+              {pac.direccion && <p className="text-sm text-slate-500">{pac.direccion}</p>}
+              {pac.email    && <p className="text-sm text-slate-500">{pac.email}</p>}
               {pac.telefono && <p className="text-sm text-slate-500">{pac.telefono}</p>}
             </div>
           </div>

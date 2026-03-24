@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Search, Plus, Phone, Mail, CalendarDays, CreditCard, ChevronRight } from "lucide-react";
+import { Search, Plus, Phone, Mail, CalendarDays, CreditCard, ChevronRight, MapPin, CreditCard as IdCard } from "lucide-react";
 import { useApp } from "@/lib/store";
 import NuevoPacienteModal from "@/components/NuevoPacienteModal";
 
@@ -94,10 +94,14 @@ export default function PacientesPage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2 text-sm text-slate-600"><Phone className="w-4 h-4 text-slate-400" />{pacienteActivo.telefono}</div>
-                  <div className="flex items-center gap-2 text-sm text-slate-600"><Mail className="w-4 h-4 text-slate-400" />{pacienteActivo.email}</div>
-                  <div className="flex items-center gap-2 text-sm text-slate-600"><CalendarDays className="w-4 h-4 text-slate-400" />{citasPaciente.length} sesiones en total</div>
-                  <div className="flex items-center gap-2 text-sm text-slate-600"><CreditCard className="w-4 h-4 text-slate-400" />{pacienteActivo.sesionPrecio} € / sesión</div>
+                  <div className="flex items-center gap-2 text-sm text-slate-600"><Phone className="w-4 h-4 text-slate-400 flex-shrink-0" /><span className="truncate">{pacienteActivo.telefono || "—"}</span></div>
+                  <div className="flex items-center gap-2 text-sm text-slate-600"><Mail className="w-4 h-4 text-slate-400 flex-shrink-0" /><span className="truncate">{pacienteActivo.email || "—"}</span></div>
+                  <div className="flex items-center gap-2 text-sm text-slate-600"><IdCard className="w-4 h-4 text-slate-400 flex-shrink-0" /><span>{pacienteActivo.dni || "Sin DNI"}</span></div>
+                  <div className="flex items-center gap-2 text-sm text-slate-600"><CreditCard className="w-4 h-4 text-slate-400 flex-shrink-0" />{pacienteActivo.sesionPrecio} € / sesión</div>
+                  {pacienteActivo.direccion && (
+                    <div className="flex items-center gap-2 text-sm text-slate-600 col-span-2"><MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" /><span className="truncate">{pacienteActivo.direccion}</span></div>
+                  )}
+                  <div className="flex items-center gap-2 text-sm text-slate-600"><CalendarDays className="w-4 h-4 text-slate-400 flex-shrink-0" />{citasPaciente.length} sesiones en total</div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

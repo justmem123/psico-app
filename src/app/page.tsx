@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useApp } from "@/lib/store";
+import { useRouter } from "next/navigation";
 import CitaDetailModal from "@/components/CitaDetailModal";
-import { CalendarDays, Users, CreditCard, TrendingUp, Clock, CheckCircle, AlertCircle, XCircle, Loader2, UserX } from "lucide-react";
+import { CalendarDays, Users, CreditCard, TrendingUp, Clock, CheckCircle, AlertCircle, XCircle, Loader2, UserX, ArrowUpRight } from "lucide-react";
 
 const estadoConfig = {
   confirmada: { label: "Confirmada", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle },
@@ -22,6 +23,7 @@ const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto"
 export default function Dashboard() {
   const { citas, pacientes, loading } = useApp();
   const [citaSelId, setCitaSelId] = useState<string | null>(null);
+  const router = useRouter();
 
   const ahora   = new Date();
   const hoyStr  = ahora.toISOString().split("T")[0];
@@ -78,18 +80,22 @@ export default function Dashboard() {
       {/* Stats principales — igual que antes: 4 columnas desktop, 2 en móvil */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4">
         {[
-          { label: "Citas hoy",         value: citasHoy.length,      icon: CalendarDays, color: "text-violet-600", bg: "bg-violet-50"  },
-          { label: "Pacientes activos", value: pacientes.length,      icon: Users,        color: "text-sky-600",    bg: "bg-sky-50"     },
-          { label: "Ingresos este mes", value: `${ingresosMes} €`,    icon: TrendingUp,   color: "text-emerald-600",bg: "bg-emerald-50" },
-          { label: "Cobros pendientes", value: pendientesPago.length, icon: CreditCard,   color: "text-amber-600",  bg: "bg-amber-50"   },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-white rounded-2xl p-4 md:p-5 border border-slate-100">
-            <div className={`w-9 h-9 md:w-10 md:h-10 rounded-xl ${bg} flex items-center justify-center mb-3`}>
-              <Icon className={`w-4 h-4 md:w-5 md:h-5 ${color}`} />
+          { label: "Citas hoy",         value: citasHoy.length,      icon: CalendarDays, color: "text-violet-600", bg: "bg-violet-50",  href: "/agenda"           },
+          { label: "Pacientes activos", value: pacientes.length,      icon: Users,        color: "text-sky-600",    bg: "bg-sky-50",     href: "/pacientes"        },
+          { label: "Ingresos este mes", value: `${ingresosMes} €`,    icon: TrendingUp,   color: "text-emerald-600",bg: "bg-emerald-50", href: "/cobros?f=pagado"  },
+          { label: "Cobros pendientes", value: pendientesPago.length, icon: CreditCard,   color: "text-amber-600",  bg: "bg-amber-50",   href: "/cobros?f=pendiente"},
+        ].map(({ label, value, icon: Icon, color, bg, href }) => (
+          <button key={label} onClick={() => router.push(href)}
+            className="bg-white rounded-2xl p-4 md:p-5 border border-slate-100 text-left hover:shadow-md hover:border-slate-200 transition-all group cursor-pointer">
+            <div className="flex items-start justify-between mb-3">
+              <div className={`w-9 h-9 md:w-10 md:h-10 rounded-xl ${bg} flex items-center justify-center`}>
+                <Icon className={`w-4 h-4 md:w-5 md:h-5 ${color}`} />
+              </div>
+              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400 transition-colors" />
             </div>
             <p className="text-xl md:text-2xl font-bold text-slate-800">{value}</p>
             <p className="text-xs md:text-sm text-slate-400 mt-0.5">{label}</p>
-          </div>
+          </button>
         ))}
       </div>
 
