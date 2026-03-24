@@ -14,8 +14,7 @@ interface Props {
 const ESTADOS: { value: EstadoCita; label: string; color: string; icon: React.ElementType }[] = [
   { value: "confirmada", label: "Confirmada", color: "bg-emerald-100 text-emerald-700 ring-emerald-300", icon: CheckCircle },
   { value: "pendiente",  label: "Pendiente",  color: "bg-amber-100 text-amber-700 ring-amber-300",       icon: HelpCircle  },
-  { value: "falta",      label: "Falta",      color: "bg-red-100 text-red-600 ring-red-300",             icon: AlertCircle },
-  { value: "cancelada",  label: "Cancelada",  color: "bg-slate-100 text-slate-500 ring-slate-300",       icon: XCircle     },
+  { value: "cancelada",  label: "Cancelada",  color: "bg-red-100 text-red-600 ring-red-300",             icon: XCircle     },
 ];
 
 const PAGOS: { value: EstadoPago; label: string; color: string }[] = [
