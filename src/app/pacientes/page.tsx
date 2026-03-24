@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Search, Plus, Phone, Mail, CalendarDays, CreditCard, ChevronRight, MapPin, CreditCard as IdCard, Pencil } from "lucide-react";
+import { Search, Plus, Phone, Mail, CalendarDays, CreditCard, ChevronRight, MapPin, CreditCard as IdCard, Pencil, Download } from "lucide-react";
 import { useApp } from "@/lib/store";
 import type { Paciente } from "@/lib/store";
 import NuevoPacienteModal from "@/components/NuevoPacienteModal";
@@ -17,6 +17,21 @@ const estadoCitaColor: Record<string,string> = {
   cancelada:  "bg-slate-100 text-slate-500",
   falta:      "bg-red-100 text-red-600",
 };
+
+function exportarCSV(pacientes: Paciente[]) {
+  const headers = ["Nombre", "DNI/NIE", "Teléfono", "Email", "Dirección", "Precio sesión (€)"];
+  const rows = pacientes.map(p => [
+    p.nombre, p.dni ?? "", p.telefono, p.email, p.direccion ?? "", p.sesionPrecio,
+  ]);
+  const csv = [headers, ...rows]
+    .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = "pacientes.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function PacientesPage() {
   const { pacientes, citas } = useApp();
@@ -38,9 +53,15 @@ export default function PacientesPage() {
           <h1 className="text-xl md:text-2xl font-bold text-slate-800">Pacientes</h1>
           <p className="text-slate-400 text-sm mt-0.5">{pacientes.length} pacientes activos</p>
         </div>
-        <button onClick={() => setModal(true)} className="flex items-center gap-2 bg-violet-600 text-white px-3 md:px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors">
-          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Nuevo paciente</span><span className="sm:hidden">Nuevo</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => exportarCSV(pacientes)}
+            className="flex items-center gap-2 border border-slate-200 text-slate-600 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors">
+            <Download className="w-4 h-4" /> <span className="hidden sm:inline">Exportar Excel</span>
+          </button>
+          <button onClick={() => setModal(true)} className="flex items-center gap-2 bg-violet-600 text-white px-3 md:px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors">
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Nuevo paciente</span><span className="sm:hidden">Nuevo</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
