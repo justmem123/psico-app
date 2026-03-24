@@ -1,8 +1,10 @@
 "use client";
 import { useState } from "react";
-import { Search, Plus, Phone, Mail, CalendarDays, CreditCard, ChevronRight, MapPin, CreditCard as IdCard } from "lucide-react";
+import { Search, Plus, Phone, Mail, CalendarDays, CreditCard, ChevronRight, MapPin, CreditCard as IdCard, Pencil } from "lucide-react";
 import { useApp } from "@/lib/store";
+import type { Paciente } from "@/lib/store";
 import NuevoPacienteModal from "@/components/NuevoPacienteModal";
+import EditarPacienteModal from "@/components/EditarPacienteModal";
 
 const estadoPagoColor: Record<string,string> = {
   pagado:    "bg-emerald-100 text-emerald-700",
@@ -21,6 +23,7 @@ export default function PacientesPage() {
   const [busqueda,     setBusqueda]     = useState("");
   const [seleccionado, setSeleccionado] = useState<string|null>(null);
   const [modal,        setModal]        = useState(false);
+  const [editando,     setEditando]     = useState<Paciente | null>(null);
 
   const filtrados        = pacientes.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()));
   const pacienteActivo   = seleccionado ? pacientes.find(p => p.id === seleccionado) : null;
@@ -85,13 +88,17 @@ export default function PacientesPage() {
             <div className="space-y-4">
               <div className="bg-white rounded-2xl border border-slate-100 p-6">
                 <div className="flex items-center gap-4 mb-5">
-                  <div className={`w-14 h-14 rounded-2xl ${pacienteActivo.color} flex items-center justify-center text-white font-bold text-lg`}>
+                  <div className={`w-14 h-14 rounded-2xl ${pacienteActivo.color} flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
                     {pacienteActivo.nombre.split(" ").map(n => n[0]).join("").slice(0,2)}
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-800">{pacienteActivo.nombre}</h2>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl font-bold text-slate-800 truncate">{pacienteActivo.nombre}</h2>
                     <p className="text-slate-400 text-sm">Paciente activo</p>
                   </div>
+                  <button onClick={() => setEditando(pacienteActivo)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition-colors flex-shrink-0">
+                    <Pencil className="w-3.5 h-3.5" /> Editar
+                  </button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex items-center gap-2 text-sm text-slate-600"><Phone className="w-4 h-4 text-slate-400 flex-shrink-0" /><span className="truncate">{pacienteActivo.telefono || "—"}</span></div>
@@ -140,6 +147,7 @@ export default function PacientesPage() {
       </div>
 
       <NuevoPacienteModal open={modal} onClose={() => setModal(false)} />
+      <EditarPacienteModal paciente={editando} onClose={() => setEditando(null)} />
     </div>
   );
 }

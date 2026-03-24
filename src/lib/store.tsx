@@ -33,6 +33,7 @@ interface AppState {
   loading:     boolean;
   addCita:       (c: Omit<Cita,  "id">) => Promise<void>;
   addPaciente:   (p: Omit<Paciente, "id">) => Promise<void>;
+  updatePaciente:(id: string, changes: Partial<Omit<Paciente,"id">>) => Promise<void>;
   marcarPagado:  (citaId: string) => Promise<void>;
   marcarEstado:  (citaId: string, estado: EstadoCita) => Promise<void>;
   updateCita:    (citaId: string, changes: Partial<Omit<Cita,"id">>) => Promise<void>;
@@ -91,6 +92,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) setCitas(prev => [...prev, { id: data.id, pacienteId: data.paciente_id, fecha: data.fecha, hora: data.hora.slice(0,5), duracion: data.duracion, estado: data.estado, estadoPago: data.estado_pago, notas: data.notas ?? "" }]);
   }
 
+  async function updatePaciente(id: string, changes: Partial<Omit<Paciente,"id">>) {
+    const dbChanges: Record<string, unknown> = {};
+    if (changes.nombre      !== undefined) dbChanges.nombre       = changes.nombre;
+    if (changes.email       !== undefined) dbChanges.email        = changes.email;
+    if (changes.telefono    !== undefined) dbChanges.telefono     = changes.telefono;
+    if (changes.sesionPrecio!== undefined) dbChanges.sesion_precio= changes.sesionPrecio;
+    if (changes.dni         !== undefined) dbChanges.dni          = changes.dni;
+    if (changes.direccion   !== undefined) dbChanges.direccion    = changes.direccion;
+    await supabase.from("pacientes").update(dbChanges).eq("id", id);
+    setPacientes(prev => prev.map(p => p.id === id ? { ...p, ...changes } : p));
+  }
+
   async function marcarPagado(citaId: string) {
     await supabase.from("citas").update({ estado_pago: "pagado" }).eq("id", citaId);
     setCitas(prev => prev.map(c => c.id === citaId ? { ...c, estadoPago: "pagado" } : c));
@@ -119,7 +132,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <Ctx.Provider value={{ citas, pacientes, loading, addCita, addPaciente, marcarPagado, marcarEstado, updateCita, deleteCita }}>
+    <Ctx.Provider value={{ citas, pacientes, loading, addCita, addPaciente, updatePaciente, marcarPagado, marcarEstado, updateCita, deleteCita }}>
       {children}
     </Ctx.Provider>
   );
