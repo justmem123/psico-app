@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useApp } from "@/lib/store";
-import type { Cita } from "@/lib/store";
 import NuevaCitaModal from "@/components/NuevaCitaModal";
 import CitaDetailModal from "@/components/CitaDetailModal";
 
@@ -31,7 +30,7 @@ export default function AgendaPage() {
   const { citas, pacientes } = useApp();
   const [semana,  setSemana]  = useState(() => getMonday(new Date()));
   const [modal,   setModal]   = useState(false);
-  const [citaSel, setCitaSel] = useState<Cita | null>(null);
+  const [citaSelId, setCitaSelId] = useState<string | null>(null);
   const [diaMovil, setDiaMovil] = useState(() => new Date());
 
   const dias = Array.from({ length: 7 }, (_, i) => addDays(semana, i));
@@ -108,7 +107,7 @@ export default function AgendaPage() {
             const pac = pacientes.find(p => p.id === cita.pacienteId);
             if (!pac) return null;
             return (
-              <div key={cita.id} onClick={() => setCitaSel(cita)}
+              <div key={cita.id} onClick={() => setCitaSelId(cita.id)}
                 className={`flex items-center gap-3 bg-white rounded-xl border-l-4 px-4 py-3 shadow-sm cursor-pointer ${estadoColor[cita.estado]}`}>
                 <div className={`w-9 h-9 rounded-full ${pac.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
                   {pac.nombre.split(" ").map(n => n[0]).join("").slice(0,2)}
@@ -160,7 +159,7 @@ export default function AgendaPage() {
                       const pac = pacientes.find(p => p.id === cita.pacienteId);
                       if (!pac) return null;
                       return (
-                        <div onClick={() => setCitaSel(cita)} className={`rounded-lg border-l-4 px-2 py-1.5 cursor-pointer hover:opacity-80 transition-opacity ${estadoColor[cita.estado]}`}>
+                        <div onClick={() => setCitaSelId(cita.id)} className={`rounded-lg border-l-4 px-2 py-1.5 cursor-pointer hover:opacity-80 transition-opacity ${estadoColor[cita.estado]}`}>
                           <p className="text-xs font-semibold text-slate-700 truncate">{pac.nombre}</p>
                           <p className="text-xs text-slate-500">{cita.hora} · {cita.duracion}'</p>
                         </div>
@@ -184,7 +183,7 @@ export default function AgendaPage() {
       </div>
 
       <NuevaCitaModal open={modal} onClose={() => setModal(false)} />
-      <CitaDetailModal cita={citaSel} onClose={() => setCitaSel(null)} />
+      <CitaDetailModal citaId={citaSelId} onClose={() => setCitaSelId(null)} />
     </div>
   );
 }

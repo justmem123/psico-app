@@ -6,7 +6,7 @@ import { useApp } from "@/lib/store";
 import type { Cita, EstadoCita, EstadoPago } from "@/lib/store";
 
 interface Props {
-  cita: Cita | null;
+  citaId: string | null;
   onClose: () => void;
 }
 
@@ -31,8 +31,9 @@ function fmtFecha(fecha: string) {
   return `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
 }
 
-export default function CitaDetailModal({ cita, onClose }: Props) {
-  const { pacientes, updateCita, deleteCita } = useApp();
+export default function CitaDetailModal({ citaId, onClose }: Props) {
+  const { citas, pacientes, updateCita, deleteCita } = useApp();
+  const cita = citas.find(c => c.id === citaId) ?? null;
   const [notas,    setNotas]    = useState("");
   const [saving,   setSaving]   = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -72,7 +73,7 @@ export default function CitaDetailModal({ cita, onClose }: Props) {
   const EstIcon = estadoActual.icon;
 
   return (
-    <Modal open={!!cita} onClose={onClose} title="Detalle de cita">
+    <Modal open={!!citaId} onClose={onClose} title="Detalle de cita">
       {/* Paciente */}
       <div className="flex items-center gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
         <div className={`w-12 h-12 rounded-full ${pac.color ?? "bg-violet-400"} flex items-center justify-center text-white font-bold text-base flex-shrink-0`}>

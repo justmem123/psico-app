@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { useApp } from "@/lib/store";
-import type { Cita } from "@/lib/store";
 import CitaDetailModal from "@/components/CitaDetailModal";
 import { CalendarDays, Users, CreditCard, TrendingUp, Clock, CheckCircle, AlertCircle, XCircle, Loader2, UserX } from "lucide-react";
 
@@ -22,7 +21,7 @@ const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto"
 
 export default function Dashboard() {
   const { citas, pacientes, loading } = useApp();
-  const [citaSel, setCitaSel] = useState<Cita | null>(null);
+  const [citaSelId, setCitaSelId] = useState<string | null>(null);
 
   const ahora   = new Date();
   const hoyStr  = ahora.toISOString().split("T")[0];
@@ -67,7 +66,7 @@ export default function Dashboard() {
           <p className="text-slate-500 mt-1 text-sm">Aquí tienes el resumen de hoy</p>
         </div>
         {proximaCita && proximaPac && (
-          <button onClick={() => setCitaSel(proximaCita)}
+          <button onClick={() => setCitaSelId(proximaCita.id)}
             className="text-right bg-violet-50 hover:bg-violet-100 transition-colors rounded-2xl px-4 py-2.5 cursor-pointer">
             <p className="text-xs text-violet-500 font-medium mb-0.5">Próxima cita</p>
             <p className="font-semibold text-violet-800 text-sm">{proximaPac.nombre.split(" ")[0]}</p>
@@ -128,7 +127,7 @@ export default function Dashboard() {
               const pago    = pagoConfig[cita.estadoPago];
               const EstIcon = est.icon;
               return (
-                <div key={cita.id} onClick={() => setCitaSel(cita)}
+                <div key={cita.id} onClick={() => setCitaSelId(cita.id)}
                   className="flex items-center gap-3 px-4 md:px-6 py-3.5 hover:bg-slate-50 transition-colors cursor-pointer">
                   <div className={`w-9 h-9 rounded-full ${pac.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
                     {pac.nombre.split(" ").map(n => n[0]).join("").slice(0,2)}
@@ -162,7 +161,7 @@ export default function Dashboard() {
               if (!pac) return null;
               const pago = pagoConfig[cita.estadoPago];
               return (
-                <div key={cita.id} onClick={() => setCitaSel(cita)}
+                <div key={cita.id} onClick={() => setCitaSelId(cita.id)}
                   className="flex items-center gap-3 px-4 md:px-6 py-3.5 hover:bg-slate-50 transition-colors cursor-pointer">
                   <div className={`w-8 h-8 rounded-full ${pac.color} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}>
                     {pac.nombre.split(" ").map(n => n[0]).join("").slice(0,2)}
@@ -182,7 +181,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <CitaDetailModal cita={citaSel} onClose={() => setCitaSel(null)} />
+      <CitaDetailModal citaId={citaSelId} onClose={() => setCitaSelId(null)} />
     </div>
   );
 }
