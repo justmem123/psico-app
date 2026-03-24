@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Phone, Mail, Clock, Calendar, Euro, FileText, Trash2, CheckCircle, AlertCircle, XCircle, HelpCircle, Loader2 } from "lucide-react";
 import Modal from "./ui/Modal";
+import FacturaModal from "./FacturaModal";
 import { useApp } from "@/lib/store";
 import type { Cita, EstadoCita, EstadoPago } from "@/lib/store";
 
@@ -35,9 +36,10 @@ export default function CitaDetailModal({ citaId, onClose }: Props) {
   const { citas, pacientes, updateCita, deleteCita } = useApp();
   const cita = citas.find(c => c.id === citaId) ?? null;
   const [notas,    setNotas]    = useState("");
-  const [saving,   setSaving]   = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [confirm,  setConfirm]  = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [deleting,  setDeleting]  = useState(false);
+  const [confirm,   setConfirm]   = useState(false);
+  const [factura,   setFactura]   = useState(false);
 
   const pac = cita ? pacientes.find(p => p.id === cita.pacienteId) : null;
 
@@ -73,6 +75,7 @@ export default function CitaDetailModal({ citaId, onClose }: Props) {
   const EstIcon = estadoActual.icon;
 
   return (
+    <>
     <Modal open={!!citaId} onClose={onClose} title="Detalle de cita">
       {/* Paciente */}
       <div className="flex items-center gap-4 mb-6 p-4 bg-slate-50 rounded-xl">
@@ -171,6 +174,16 @@ export default function CitaDetailModal({ citaId, onClose }: Props) {
         </button>
       </div>
 
+      {/* Factura */}
+      {cita.estadoPago === "pagado" && (
+        <div className="mb-4">
+          <button onClick={() => setFactura(true)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-violet-200 text-violet-600 text-sm font-medium hover:bg-violet-50 transition-colors">
+            <FileText className="w-4 h-4" /> Generar factura
+          </button>
+        </div>
+      )}
+
       {/* Eliminar */}
       <div className="border-t border-slate-100 pt-4">
         {!confirm ? (
@@ -192,5 +205,7 @@ export default function CitaDetailModal({ citaId, onClose }: Props) {
         )}
       </div>
     </Modal>
+    {factura && cita && <FacturaModal cita={cita} onClose={() => setFactura(false)} />}
+    </>
   );
 }
