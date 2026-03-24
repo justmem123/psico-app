@@ -70,7 +70,8 @@ export default function CitaDetailModal({ citaId, onClose }: Props) {
   }
 
   const initials = pac.nombre.split(" ").map(n => n[0]).join("").slice(0,2).toUpperCase();
-  const estadoActual = ESTADOS.find(e => e.value === cita.estado)!;
+  const estadoActual = ESTADOS.find(e => e.value === cita.estado)
+    ?? { label: "Cancelada", color: "bg-red-100 text-red-600 ring-red-300", icon: XCircle };
   const EstIcon = estadoActual.icon;
 
   return (
