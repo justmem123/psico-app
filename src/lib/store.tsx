@@ -48,6 +48,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [citas,     setCitas]     = useState<Cita[]>([]);
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [loading,   setLoading]   = useState(true);
+  const [userId,    setUserId]    = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
 
   // Cargar datos desde Supabase
   const cargar = useCallback(async () => {
@@ -76,6 +81,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase.from("pacientes").insert({
       nombre: p.nombre, email: p.email, telefono: p.telefono,
       sesion_precio: p.sesionPrecio, color, dni: p.dni, direccion: p.direccion,
+      user_id: userId,
     }).select().single();
     if (data) setPacientes(prev => [...prev, {
       id: data.id, nombre: data.nombre, email: data.email ?? "",
@@ -88,6 +94,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase.from("citas").insert({
       paciente_id: c.pacienteId, fecha: c.fecha, hora: c.hora,
       duracion: c.duracion, estado: c.estado, estado_pago: c.estadoPago, notas: c.notas,
+      user_id: userId,
     }).select().single();
     if (data) setCitas(prev => [...prev, { id: data.id, pacienteId: data.paciente_id, fecha: data.fecha, hora: data.hora.slice(0,5), duracion: data.duracion, estado: data.estado, estadoPago: data.estado_pago, notas: data.notas ?? "" }]);
   }
