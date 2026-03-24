@@ -1,6 +1,9 @@
 "use client";
+import { useState } from "react";
 import { useApp } from "@/lib/store";
-import { CalendarDays, Users, CreditCard, TrendingUp, Clock, CheckCircle, AlertCircle, XCircle, Loader2 } from "lucide-react";
+import type { Cita } from "@/lib/store";
+import CitaDetailModal from "@/components/CitaDetailModal";
+import { CalendarDays, Users, CreditCard, TrendingUp, Clock, CheckCircle, AlertCircle, XCircle, Loader2, UserX } from "lucide-react";
 
 const estadoConfig = {
   confirmada: { label: "Confirmada", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle },
@@ -14,34 +17,46 @@ const pagoConfig = {
   debe:      { label: "Debe",      color: "bg-red-100 text-red-600"         },
 };
 
+const DIAS  = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+
 export default function Dashboard() {
   const { citas, pacientes, loading } = useApp();
-  const hoyStr = new Date().toISOString().split("T")[0];
-
-  const citasHoy       = citas.filter(c => c.fecha === hoyStr).sort((a,b) => a.hora.localeCompare(b.hora));
-  const pendientesPago = citas.filter(c => c.estadoPago !== "pagado");
-  const ingresosMes    = citas.filter(c => {
-    const mes = new Date().getMonth();
-    return new Date(c.fecha).getMonth() === mes && c.estadoPago === "pagado";
-  }).reduce((s,c) => {
-    const pac = pacientes.find(p => p.id === c.pacienteId);
-    return s + (pac?.sesionPrecio ?? 0);
-  }, 0);
-  const totalDebe = citas.filter(c => c.estadoPago === "debe").reduce((s,c) => {
-    const pac = pacientes.find(p => p.id === c.pacienteId);
-    return s + (pac?.sesionPrecio ?? 0);
-  }, 0);
+  const [citaSel, setCitaSel] = useState<Cita | null>(null);
 
   const ahora   = new Date();
-  const DIAS    = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
-  const MESES   = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-  const fechaFmt = `${DIAS[ahora.getDay()]}, ${ahora.getDate()} de ${MESES[ahora.getMonth()]}`;
+  const hoyStr  = ahora.toISOString().split("T")[0];
+  const mes     = ahora.getMonth();
+  const año     = ahora.getFullYear();
+  const fechaFmt = `${DIAS[ahora.getDay()]}, ${ahora.getDate()} de ${MESES[mes]}`;
+
+  const citasHoy        = citas.filter(c => c.fecha === hoyStr).sort((a,b) => a.hora.localeCompare(b.hora));
+  const pendientesPago  = citas.filter(c => c.estadoPago !== "pagado");
+  const citasMes        = citas.filter(c => { const d = new Date(c.fecha); return d.getMonth() === mes && d.getFullYear() === año; });
+  const sesionesCompletadas = citasMes.filter(c => c.estado === "confirmada").length;
+  const faltas          = citasMes.filter(c => c.estado === "falta").length;
+  const tasaFalta       = citasMes.length > 0 ? Math.round((faltas / citasMes.length) * 100) : 0;
+
+  const ingresosMes = citasMes
+    .filter(c => c.estadoPago === "pagado")
+    .reduce((s,c) => s + (pacientes.find(p => p.id === c.pacienteId)?.sesionPrecio ?? 0), 0);
+
+  const totalDebe = citas.filter(c => c.estadoPago === "debe")
+    .reduce((s,c) => s + (pacientes.find(p => p.id === c.pacienteId)?.sesionPrecio ?? 0), 0);
+
+  // Próxima cita (futura más cercana)
+  const proximaCita = citas
+    .filter(c => c.fecha > hoyStr || (c.fecha === hoyStr && c.hora > ahora.toTimeString().slice(0,5)))
+    .sort((a,b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora))[0];
+  const proximaPac = proximaCita ? pacientes.find(p => p.id === proximaCita.pacienteId) : null;
 
   const stats = [
-    { label: "Citas hoy",         value: loading ? "—" : citasHoy.length,      icon: CalendarDays, color: "text-violet-600", bg: "bg-violet-50"  },
-    { label: "Pacientes activos", value: loading ? "—" : pacientes.length,      icon: Users,        color: "text-sky-600",    bg: "bg-sky-50"     },
-    { label: "Ingresos este mes", value: loading ? "—" : `${ingresosMes} €`,    icon: TrendingUp,   color: "text-emerald-600",bg: "bg-emerald-50" },
-    { label: "Cobros pendientes", value: loading ? "—" : pendientesPago.length, icon: CreditCard,   color: "text-amber-600",  bg: "bg-amber-50"   },
+    { label: "Citas hoy",             value: loading ? "—" : citasHoy.length,          icon: CalendarDays, color: "text-violet-600", bg: "bg-violet-50"  },
+    { label: "Pacientes activos",     value: loading ? "—" : pacientes.length,          icon: Users,        color: "text-sky-600",    bg: "bg-sky-50"     },
+    { label: "Ingresos este mes",     value: loading ? "—" : `${ingresosMes} €`,        icon: TrendingUp,   color: "text-emerald-600",bg: "bg-emerald-50" },
+    { label: "Cobros pendientes",     value: loading ? "—" : pendientesPago.length,     icon: CreditCard,   color: "text-amber-600",  bg: "bg-amber-50"   },
+    { label: "Sesiones este mes",     value: loading ? "—" : sesionesCompletadas,       icon: CheckCircle,  color: "text-indigo-600", bg: "bg-indigo-50"  },
+    { label: "Tasa de faltas",        value: loading ? "—" : `${tasaFalta}%`,           icon: UserX,        color: "text-red-500",    bg: "bg-red-50"     },
   ];
 
   if (loading) return (
@@ -55,13 +70,24 @@ export default function Dashboard() {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <p className="text-sm text-slate-400 capitalize mb-1">{fechaFmt}</p>
-        <h1 className="text-2xl font-bold text-slate-800">Buenos días 👋</h1>
-        <p className="text-slate-500 mt-1">Aquí tienes el resumen de hoy</p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <p className="text-sm text-slate-400 capitalize mb-1">{fechaFmt}</p>
+          <h1 className="text-2xl font-bold text-slate-800">Buenos días 👋</h1>
+          <p className="text-slate-500 mt-1">Aquí tienes el resumen de hoy</p>
+        </div>
+        {proximaCita && proximaPac && (
+          <button onClick={() => setCitaSel(proximaCita)}
+            className="text-right bg-violet-50 hover:bg-violet-100 transition-colors rounded-2xl px-5 py-3 cursor-pointer">
+            <p className="text-xs text-violet-500 font-medium mb-0.5">Próxima cita</p>
+            <p className="font-semibold text-violet-800 text-sm">{proximaPac.nombre}</p>
+            <p className="text-xs text-violet-500">{proximaCita.fecha === hoyStr ? "Hoy" : proximaCita.fecha} · {proximaCita.hora}</p>
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
         {stats.map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="bg-white rounded-2xl p-5 border border-slate-100">
             <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center mb-3`}>
@@ -74,6 +100,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-5 gap-6">
+        {/* Agenda de hoy */}
         <div className="col-span-3 bg-white rounded-2xl border border-slate-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h2 className="font-semibold text-slate-800">Agenda de hoy</h2>
@@ -88,7 +115,8 @@ export default function Dashboard() {
               const pago   = pagoConfig[cita.estadoPago];
               const EstIcon = est.icon;
               return (
-                <div key={cita.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
+                <div key={cita.id} onClick={() => setCitaSel(cita)}
+                  className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
                   <div className={`w-9 h-9 rounded-full ${pac.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
                     {pac.nombre.split(" ").map(n => n[0]).join("").slice(0,2)}
                   </div>
@@ -108,6 +136,7 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Cobros pendientes */}
         <div className="col-span-2 bg-white rounded-2xl border border-slate-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h2 className="font-semibold text-slate-800">Cobros pendientes</h2>
@@ -120,7 +149,8 @@ export default function Dashboard() {
               if (!pac) return null;
               const pago = pagoConfig[cita.estadoPago];
               return (
-                <div key={cita.id} className="flex items-center gap-3 px-6 py-3.5 hover:bg-slate-50 transition-colors">
+                <div key={cita.id} onClick={() => setCitaSel(cita)}
+                  className="flex items-center gap-3 px-6 py-3.5 hover:bg-slate-50 transition-colors cursor-pointer">
                   <div className={`w-8 h-8 rounded-full ${pac.color} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}>
                     {pac.nombre.split(" ").map(n => n[0]).join("").slice(0,2)}
                   </div>
@@ -138,6 +168,8 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      <CitaDetailModal cita={citaSel} onClose={() => setCitaSel(null)} />
     </div>
   );
 }

@@ -3,6 +3,8 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useApp } from "@/lib/store";
 import NuevaCitaModal from "@/components/NuevaCitaModal";
+import CitaDetailModal from "@/components/CitaDetailModal";
+import type { Cita } from "@/lib/store";
 
 const HORAS = ["09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
 const DIAS  = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
@@ -27,8 +29,9 @@ const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto"
 
 export default function AgendaPage() {
   const { citas, pacientes } = useApp();
-  const [semana,  setSemana]  = useState(() => getMonday(new Date()));
-  const [modal,   setModal]   = useState(false);
+  const [semana,    setSemana]    = useState(() => getMonday(new Date()));
+  const [modal,     setModal]     = useState(false);
+  const [citaSel,   setCitaSel]   = useState<Cita | null>(null);
 
   const dias  = Array.from({ length: 7 }, (_, i) => addDays(semana, i));
   const hoy   = fmt(new Date());
@@ -104,7 +107,7 @@ export default function AgendaPage() {
                       const pac = pacientes.find(p => p.id === cita.pacienteId);
                       if (!pac) return null;
                       return (
-                        <div className={`rounded-lg border-l-4 px-2 py-1.5 cursor-pointer hover:opacity-80 transition-opacity ${estadoColor[cita.estado]}`}>
+                        <div onClick={() => setCitaSel(cita)} className={`rounded-lg border-l-4 px-2 py-1.5 cursor-pointer hover:opacity-80 transition-opacity ${estadoColor[cita.estado]}`}>
                           <p className="text-xs font-semibold text-slate-700 truncate">{pac.nombre}</p>
                           <p className="text-xs text-slate-500">{cita.hora} · {cita.duracion}'</p>
                         </div>
@@ -128,6 +131,7 @@ export default function AgendaPage() {
       </div>
 
       <NuevaCitaModal open={modal} onClose={() => setModal(false)} />
+      <CitaDetailModal cita={citaSel} onClose={() => setCitaSel(null)} />
     </div>
   );
 }

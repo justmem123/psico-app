@@ -33,6 +33,8 @@ interface AppState {
   addPaciente:   (p: Omit<Paciente, "id">) => Promise<void>;
   marcarPagado:  (citaId: string) => Promise<void>;
   marcarEstado:  (citaId: string, estado: EstadoCita) => Promise<void>;
+  updateCita:    (citaId: string, changes: Partial<Omit<Cita,"id">>) => Promise<void>;
+  deleteCita:    (citaId: string) => Promise<void>;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -92,8 +94,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCitas(prev => prev.map(c => c.id === citaId ? { ...c, estado } : c));
   }
 
+  async function updateCita(citaId: string, changes: Partial<Omit<Cita,"id">>) {
+    const dbChanges: Record<string, unknown> = {};
+    if (changes.estado     !== undefined) dbChanges.estado      = changes.estado;
+    if (changes.estadoPago !== undefined) dbChanges.estado_pago = changes.estadoPago;
+    if (changes.notas      !== undefined) dbChanges.notas       = changes.notas;
+    if (changes.hora       !== undefined) dbChanges.hora        = changes.hora;
+    if (changes.fecha      !== undefined) dbChanges.fecha       = changes.fecha;
+    if (changes.duracion   !== undefined) dbChanges.duracion    = changes.duracion;
+    await supabase.from("citas").update(dbChanges).eq("id", citaId);
+    setCitas(prev => prev.map(c => c.id === citaId ? { ...c, ...changes } : c));
+  }
+
+  async function deleteCita(citaId: string) {
+    await supabase.from("citas").delete().eq("id", citaId);
+    setCitas(prev => prev.filter(c => c.id !== citaId));
+  }
+
   return (
-    <Ctx.Provider value={{ citas, pacientes, loading, addCita, addPaciente, marcarPagado, marcarEstado }}>
+    <Ctx.Provider value={{ citas, pacientes, loading, addCita, addPaciente, marcarPagado, marcarEstado, updateCita, deleteCita }}>
       {children}
     </Ctx.Provider>
   );
