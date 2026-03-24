@@ -11,7 +11,7 @@ export interface Paciente {
   email:        string;
   telefono:     string;
   sesionPrecio: number;
-  color:        string;
+  color?:       string;
 }
 
 export interface Cita {
