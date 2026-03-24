@@ -1,15 +1,16 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, CalendarDays, Users, CreditCard, Settings, Brain, LogOut } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, CreditCard, Settings, Brain, LogOut, BarChart2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const links = [
-  { href: "/",          icon: LayoutDashboard, label: "Inicio"    },
-  { href: "/agenda",    icon: CalendarDays,    label: "Agenda"    },
-  { href: "/pacientes", icon: Users,           label: "Pacientes" },
-  { href: "/cobros",    icon: CreditCard,      label: "Cobros"    },
-  { href: "/ajustes",   icon: Settings,        label: "Ajustes"   },
+  { href: "/",             icon: LayoutDashboard, label: "Inicio"        },
+  { href: "/agenda",       icon: CalendarDays,    label: "Agenda"        },
+  { href: "/pacientes",    icon: Users,           label: "Pacientes"     },
+  { href: "/cobros",       icon: CreditCard,      label: "Cobros"        },
+  { href: "/estadisticas", icon: BarChart2,       label: "Estadísticas"  },
+  { href: "/ajustes",      icon: Settings,        label: "Ajustes"       },
 ];
 
 export default function Sidebar() {
