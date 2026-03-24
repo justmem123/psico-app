@@ -39,9 +39,9 @@ export default function CobrosPage() {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Cobros</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-slate-800">Cobros</h1>
         <p className="text-slate-400 text-sm mt-0.5">Control de pagos y facturas</p>
       </div>
 
@@ -57,7 +57,7 @@ export default function CobrosPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-100 overflow-x-auto">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-1 bg-slate-50 rounded-xl p-1">
             <Filter className="w-4 h-4 text-slate-400 ml-2 mr-1" />

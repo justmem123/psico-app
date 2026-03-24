@@ -54,7 +54,7 @@ export default function AjustesPage() {
   }
 
   return (
-    <main className="p-8 max-w-xl">
+    <main className="p-4 md:p-8 max-w-xl">
       <h1 className="text-2xl font-bold text-slate-800 mb-8">Ajustes</h1>
 
       {/* Perfil */}

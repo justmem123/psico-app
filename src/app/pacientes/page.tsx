@@ -29,19 +29,19 @@ export default function PacientesPage() {
   const totalPendiente   = citasPaciente.filter(c => c.estadoPago !== "pagado").reduce((s,_) => s + (pacienteActivo?.sesionPrecio ?? 0), 0);
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-8">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Pacientes</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-800">Pacientes</h1>
           <p className="text-slate-400 text-sm mt-0.5">{pacientes.length} pacientes activos</p>
         </div>
-        <button onClick={() => setModal(true)} className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors">
-          <Plus className="w-4 h-4" /> Nuevo paciente
+        <button onClick={() => setModal(true)} className="flex items-center gap-2 bg-violet-600 text-white px-3 md:px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors">
+          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Nuevo paciente</span><span className="sm:hidden">Nuevo</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-5 gap-6">
-        <div className="col-span-2 bg-white rounded-2xl border border-slate-100 overflow-hidden flex flex-col">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
+        <div className="md:col-span-2 bg-white rounded-2xl border border-slate-100 overflow-hidden flex flex-col">
           <div className="p-4 border-b border-slate-100">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -70,7 +70,7 @@ export default function PacientesPage() {
           </div>
         </div>
 
-        <div className="col-span-3">
+        <div className="md:col-span-3">
           {!pacienteActivo ? (
             <div className="bg-white rounded-2xl border border-slate-100 h-96 flex items-center justify-center">
               <div className="text-center">

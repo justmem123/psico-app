@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${inter.className} bg-slate-50`}>
         <AppProvider>
           <Sidebar />
-          <main className="ml-60 min-h-screen">{children}</main>
+          <main className="ml-0 md:ml-60 min-h-screen pb-20 md:pb-0">{children}</main>
         </AppProvider>
       </body>
     </html>
