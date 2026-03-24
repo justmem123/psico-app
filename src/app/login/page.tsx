@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Brain, Mail, Lock, Eye, EyeOff, Loader2, User, Phone } from "lucide-react";
+import { Brain, Mail, Lock, Eye, EyeOff, Loader2, User } from "lucide-react";
+import PhoneInput from "@/components/ui/PhoneInput";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
@@ -83,11 +84,7 @@ export default function LoginPage() {
 
                 <div>
                   <label className={labelCls}>Teléfono</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input type="tel" required value={form.telefono} onChange={e => set("telefono", e.target.value)}
-                      placeholder="600 000 000" className={inputCls} />
-                  </div>
+                  <PhoneInput value={form.telefono} onChange={v => set("telefono", v)} required />
                 </div>
               </>
             )}

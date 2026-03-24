@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Modal from "./ui/Modal";
+import PhoneInput from "./ui/PhoneInput";
 import { useApp } from "@/lib/store";
 
 interface Props { open: boolean; onClose: () => void; }
@@ -31,8 +32,7 @@ export default function NuevoPacienteModal({ open, onClose }: Props) {
 
         <div>
           <label className={labelCls}>Teléfono</label>
-          <input type="tel" className={inputCls} placeholder="600 000 000"
-            value={form.telefono} onChange={e => set("telefono", e.target.value)} required />
+          <PhoneInput value={form.telefono} onChange={v => set("telefono", v)} required />
         </div>
 
         <div>

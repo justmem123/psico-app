@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { User, Phone, Mail, Lock, Save, Loader2, CheckCircle } from "lucide-react";
+import { User, Mail, Lock, Save, Loader2, CheckCircle } from "lucide-react";
+import PhoneInput from "@/components/ui/PhoneInput";
 
 export default function AjustesPage() {
   const supabase = createClient();
@@ -76,11 +77,7 @@ export default function AjustesPage() {
           </div>
           <div>
             <label className="text-xs font-medium text-slate-500 mb-1 block">Teléfono</label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input value={form.telefono} onChange={e => setForm(p => ({ ...p, telefono: e.target.value }))}
-                className="w-full border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
-            </div>
+            <PhoneInput value={form.telefono} onChange={v => setForm(p => ({ ...p, telefono: v }))} />
           </div>
           <div>
             <label className="text-xs font-medium text-slate-500 mb-1 block">Email</label>
