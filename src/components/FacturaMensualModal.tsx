@@ -66,12 +66,11 @@ function buildPrintHTML(
 ) {
   const filas = citasOrdenadas.map((c, i) => `
     <tr>
-      <td style="padding:10px 0;border-bottom:1px solid #f1f5f9">
-        <p style="margin:0;font-weight:600;color:#1e293b">Sesión de psicología ${i + 1}</p>
-        <p style="margin:2px 0 0;font-size:12px;color:#94a3b8">${c.hora}h${c.notas ? ` · ${c.notas}` : ""}</p>
+      <td style="padding:5px 0;border-bottom:1px solid #f1f5f9">
+        <p style="margin:0;font-weight:600;color:#1e293b;font-size:11px">Sesión ${i + 1}${c.notas ? ` · ${c.notas}` : ""}</p>
       </td>
-      <td style="padding:10px 8px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:13px;color:#475569;white-space:nowrap">${fmtFechaCorta(c.fecha)}</td>
-      <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;color:#1e293b">${paciente.sesionPrecio} €</td>
+      <td style="padding:5px 6px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:11px;color:#475569;white-space:nowrap">${fmtFechaCorta(c.fecha)} ${c.hora}h</td>
+      <td style="padding:5px 0;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;color:#1e293b;font-size:11px">${paciente.sesionPrecio} €</td>
     </tr>`).join("");
 
   return `<!DOCTYPE html>
@@ -81,74 +80,74 @@ function buildPrintHTML(
   <title>Factura ${numFac}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1e293b; background: white; padding: 48px; font-size: 14px; line-height: 1.5; }
-    @page { margin: 1cm; size: A4; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1e293b; background: white; padding: 28px 36px; font-size: 11px; line-height: 1.4; }
+    @page { margin: 0.8cm; size: A4; }
   </style>
 </head>
 <body>
   <!-- Cabecera -->
-  <div style="margin-bottom:40px">
-    <p style="font-size:28px;font-weight:700;color:#1e293b">FACTURA</p>
-    <p style="font-size:13px;font-family:monospace;color:#64748b;margin-top:4px">${numFac}</p>
+  <div style="margin-bottom:20px">
+    <p style="font-size:22px;font-weight:700;color:#1e293b">FACTURA</p>
+    <p style="font-size:11px;font-family:monospace;color:#64748b;margin-top:3px">${numFac}</p>
   </div>
 
   <!-- Emisor / Receptor -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:40px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:20px">
     <div>
-      <p style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Emitida por</p>
-      <p style="font-weight:600;color:#1e293b">${terapeuta.nombre}</p>
-      ${terapeuta.cifNif ? `<p style="font-size:13px;color:#64748b;margin-top:4px">NIF/CIF: ${terapeuta.cifNif}</p>` : ""}
-      ${terapeuta.colegiado ? `<p style="font-size:13px;color:#64748b">Nº colegiado: ${terapeuta.colegiado}</p>` : ""}
-      ${terapeuta.direccionFacturacion ? `<p style="font-size:13px;color:#64748b">${terapeuta.direccionFacturacion}</p>` : ""}
-      ${terapeuta.email ? `<p style="font-size:13px;color:#64748b">${terapeuta.email}</p>` : ""}
-      ${terapeuta.telefono ? `<p style="font-size:13px;color:#64748b">${terapeuta.telefono}</p>` : ""}
+      <p style="font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Emitida por</p>
+      <p style="font-weight:600;color:#1e293b;font-size:11px">${terapeuta.nombre}</p>
+      ${terapeuta.cifNif ? `<p style="font-size:10px;color:#64748b;margin-top:2px">NIF/CIF: ${terapeuta.cifNif}</p>` : ""}
+      ${terapeuta.colegiado ? `<p style="font-size:10px;color:#64748b">Nº colegiado: ${terapeuta.colegiado}</p>` : ""}
+      ${terapeuta.direccionFacturacion ? `<p style="font-size:10px;color:#64748b">${terapeuta.direccionFacturacion}</p>` : ""}
+      ${terapeuta.email ? `<p style="font-size:10px;color:#64748b">${terapeuta.email}</p>` : ""}
+      ${terapeuta.telefono ? `<p style="font-size:10px;color:#64748b">${terapeuta.telefono}</p>` : ""}
     </div>
     <div>
-      <p style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Facturado a</p>
-      <p style="font-weight:600;color:#1e293b">${paciente.nombre}</p>
-      ${paciente.dni ? `<p style="font-size:13px;color:#64748b;margin-top:4px">DNI/NIE: ${paciente.dni}</p>` : ""}
-      ${paciente.direccion ? `<p style="font-size:13px;color:#64748b">${paciente.direccion}</p>` : ""}
-      ${paciente.email ? `<p style="font-size:13px;color:#64748b">${paciente.email}</p>` : ""}
-      ${paciente.telefono ? `<p style="font-size:13px;color:#64748b">${paciente.telefono}</p>` : ""}
+      <p style="font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Facturado a</p>
+      <p style="font-weight:600;color:#1e293b;font-size:11px">${paciente.nombre}</p>
+      ${paciente.dni ? `<p style="font-size:10px;color:#64748b;margin-top:2px">DNI/NIE: ${paciente.dni}</p>` : ""}
+      ${paciente.direccion ? `<p style="font-size:10px;color:#64748b">${paciente.direccion}</p>` : ""}
+      ${paciente.email ? `<p style="font-size:10px;color:#64748b">${paciente.email}</p>` : ""}
+      ${paciente.telefono ? `<p style="font-size:10px;color:#64748b">${paciente.telefono}</p>` : ""}
     </div>
   </div>
 
   <!-- Fechas -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:40px">
-    <div style="background:#f8fafc;border-radius:10px;padding:14px">
-      <p style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Fecha de emisión</p>
-      <p style="font-size:13px;font-weight:500;color:#334155">${fechaHoy}</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    <div style="background:#f8fafc;border-radius:8px;padding:8px 10px">
+      <p style="font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px">Fecha de emisión</p>
+      <p style="font-size:11px;font-weight:500;color:#334155">${fechaHoy}</p>
     </div>
-    <div style="background:#f8fafc;border-radius:10px;padding:14px">
-      <p style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Última sesión</p>
-      <p style="font-size:13px;font-weight:500;color:#334155">${ultimaFecha}</p>
+    <div style="background:#f8fafc;border-radius:8px;padding:8px 10px">
+      <p style="font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px">Última sesión</p>
+      <p style="font-size:11px;font-weight:500;color:#334155">${ultimaFecha}</p>
     </div>
   </div>
 
   <!-- Tabla sesiones -->
-  <table style="width:100%;border-collapse:collapse;margin-bottom:32px">
+  <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
     <thead>
       <tr style="border-bottom:2px solid #1e293b">
-        <th style="text-align:left;padding-bottom:10px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Descripción</th>
-        <th style="text-align:center;padding-bottom:10px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Fecha</th>
-        <th style="text-align:right;padding-bottom:10px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Importe</th>
+        <th style="text-align:left;padding-bottom:6px;font-size:9px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Descripción</th>
+        <th style="text-align:center;padding-bottom:6px;font-size:9px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Fecha</th>
+        <th style="text-align:right;padding-bottom:6px;font-size:9px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Importe</th>
       </tr>
     </thead>
     <tbody>${filas}</tbody>
   </table>
 
   <!-- Total -->
-  <div style="display:flex;justify-content:flex-end;margin-bottom:0">
-    <div style="width:260px">
-      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;color:#475569">
+  <div style="display:flex;justify-content:flex-end">
+    <div style="width:220px">
+      <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569">
         <span>${totalSesiones} sesión${totalSesiones !== 1 ? "es" : ""} × ${paciente.sesionPrecio} €</span>
         <span>${totalImporte} €</span>
       </div>
-      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;color:#475569;border-bottom:1px solid #f1f5f9">
+      <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569;border-bottom:1px solid #f1f5f9">
         <span>IVA (0%)</span>
         <span>0,00 €</span>
       </div>
-      <div style="display:flex;justify-content:space-between;padding:12px 0;font-weight:700;font-size:17px;color:#1e293b">
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:700;font-size:14px;color:#1e293b">
         <span>Total</span>
         <span style="color:#7c3aed">${totalImporte},00 €</span>
       </div>
