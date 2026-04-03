@@ -7,19 +7,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-@media print {
-  @page { margin: 1cm; size: A4; }
-  body * { visibility: hidden; }
-  body { height: 0 !important; overflow: hidden !important; }
-  #factura-print, #factura-print * { visibility: visible !important; }
-  #factura-print {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background: white;
-  }
-}
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }

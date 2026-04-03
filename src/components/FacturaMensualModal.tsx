@@ -6,9 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 
 interface Props {
   paciente: Paciente;
-  citas: Cita[];      // ya filtradas: mismo paciente, mismo mes, pagadas
+  citas: Cita[];
   mes: string;        // "2026-01"
-  numero: number;     // número secuencial de la factura
+  numero: number;
   onClose: () => void;
 }
 
@@ -30,9 +30,120 @@ function numFactura(mes: string, numero: number) {
   return `FAC${year}-${String(numero).padStart(3, "0")}`;
 }
 
+type Terapeuta = {
+  nombre: string; email: string; telefono: string;
+  cifNif: string; colegiado: string; direccionFacturacion: string;
+};
+
+function buildPrintHTML(
+  terapeuta: Terapeuta,
+  paciente: Paciente,
+  citasOrdenadas: Cita[],
+  numFac: string,
+  fechaHoy: string,
+  ultimaFecha: string,
+  totalSesiones: number,
+  totalImporte: number,
+) {
+  const filas = citasOrdenadas.map((c, i) => `
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #f1f5f9">
+        <p style="margin:0;font-weight:600;color:#1e293b">Sesión de psicología ${i + 1}</p>
+        <p style="margin:2px 0 0;font-size:12px;color:#94a3b8">${c.hora}h${c.notas ? ` · ${c.notas}` : ""}</p>
+      </td>
+      <td style="padding:10px 8px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:13px;color:#475569;white-space:nowrap">${fmtFechaCorta(c.fecha)}</td>
+      <td style="padding:10px 0;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;color:#1e293b">${paciente.sesionPrecio} €</td>
+    </tr>`).join("");
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Factura ${numFac}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1e293b; background: white; padding: 48px; font-size: 14px; line-height: 1.5; }
+    @page { margin: 1cm; size: A4; }
+  </style>
+</head>
+<body>
+  <!-- Cabecera -->
+  <div style="margin-bottom:40px">
+    <p style="font-size:28px;font-weight:700;color:#1e293b">FACTURA</p>
+    <p style="font-size:13px;font-family:monospace;color:#64748b;margin-top:4px">${numFac}</p>
+  </div>
+
+  <!-- Emisor / Receptor -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:40px">
+    <div>
+      <p style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Emitida por</p>
+      <p style="font-weight:600;color:#1e293b">${terapeuta.nombre}</p>
+      ${terapeuta.cifNif ? `<p style="font-size:13px;color:#64748b;margin-top:4px">NIF/CIF: ${terapeuta.cifNif}</p>` : ""}
+      ${terapeuta.colegiado ? `<p style="font-size:13px;color:#64748b">Nº colegiado: ${terapeuta.colegiado}</p>` : ""}
+      ${terapeuta.direccionFacturacion ? `<p style="font-size:13px;color:#64748b">${terapeuta.direccionFacturacion}</p>` : ""}
+      ${terapeuta.email ? `<p style="font-size:13px;color:#64748b">${terapeuta.email}</p>` : ""}
+      ${terapeuta.telefono ? `<p style="font-size:13px;color:#64748b">${terapeuta.telefono}</p>` : ""}
+    </div>
+    <div>
+      <p style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Facturado a</p>
+      <p style="font-weight:600;color:#1e293b">${paciente.nombre}</p>
+      ${paciente.dni ? `<p style="font-size:13px;color:#64748b;margin-top:4px">DNI/NIE: ${paciente.dni}</p>` : ""}
+      ${paciente.direccion ? `<p style="font-size:13px;color:#64748b">${paciente.direccion}</p>` : ""}
+      ${paciente.email ? `<p style="font-size:13px;color:#64748b">${paciente.email}</p>` : ""}
+      ${paciente.telefono ? `<p style="font-size:13px;color:#64748b">${paciente.telefono}</p>` : ""}
+    </div>
+  </div>
+
+  <!-- Fechas -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:40px">
+    <div style="background:#f8fafc;border-radius:10px;padding:14px">
+      <p style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Fecha de emisión</p>
+      <p style="font-size:13px;font-weight:500;color:#334155">${fechaHoy}</p>
+    </div>
+    <div style="background:#f8fafc;border-radius:10px;padding:14px">
+      <p style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Última sesión</p>
+      <p style="font-size:13px;font-weight:500;color:#334155">${ultimaFecha}</p>
+    </div>
+  </div>
+
+  <!-- Tabla sesiones -->
+  <table style="width:100%;border-collapse:collapse;margin-bottom:32px">
+    <thead>
+      <tr style="border-bottom:2px solid #1e293b">
+        <th style="text-align:left;padding-bottom:10px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Descripción</th>
+        <th style="text-align:center;padding-bottom:10px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Fecha</th>
+        <th style="text-align:right;padding-bottom:10px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Importe</th>
+      </tr>
+    </thead>
+    <tbody>${filas}</tbody>
+  </table>
+
+  <!-- Total -->
+  <div style="display:flex;justify-content:flex-end;margin-bottom:0">
+    <div style="width:260px">
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;color:#475569">
+        <span>${totalSesiones} sesión${totalSesiones !== 1 ? "es" : ""} × ${paciente.sesionPrecio} €</span>
+        <span>${totalImporte} €</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;color:#475569;border-bottom:1px solid #f1f5f9">
+        <span>IVA (0%)</span>
+        <span>0,00 €</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;font-weight:700;font-size:17px;color:#1e293b">
+        <span>Total</span>
+        <span style="color:#7c3aed">${totalImporte},00 €</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
 export default function FacturaMensualModal({ paciente, citas, mes, numero, onClose }: Props) {
   const supabase = createClient();
-  const [terapeuta, setTerapeuta] = useState({ nombre: "", email: "", telefono: "", cifNif: "", colegiado: "", direccionFacturacion: "" });
+  const [terapeuta, setTerapeuta] = useState<Terapeuta>({
+    nombre: "", email: "", telefono: "", cifNif: "", colegiado: "", direccionFacturacion: "",
+  });
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -59,6 +170,17 @@ export default function FacturaMensualModal({ paciente, citas, mes, numero, onCl
   const mesLabel = `${MESES_LARGO[parseInt(month) - 1]} ${year}`;
   const numFac = numFactura(mes, numero);
   const fechaHoy = fmtFecha(new Date().toISOString().split("T")[0]);
+  const ultimaFecha = ultimaCita ? fmtFecha(ultimaCita.fecha) : "-";
+
+  function imprimir() {
+    const html = buildPrintHTML(terapeuta, paciente, citasOrdenadas, numFac, fechaHoy, ultimaFecha, totalSesiones, totalImporte);
+    const win = window.open("", "_blank", "width=800,height=900");
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); win.close(); }, 400);
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -66,10 +188,10 @@ export default function FacturaMensualModal({ paciente, citas, mes, numero, onCl
 
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 print:hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <h2 className="font-semibold text-slate-800">Factura mensual — {mesLabel}</h2>
           <div className="flex items-center gap-2">
-            <button onClick={() => window.print()}
+            <button onClick={imprimir}
               className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
               <Printer className="w-4 h-4" /> Imprimir / PDF
             </button>
@@ -79,18 +201,14 @@ export default function FacturaMensualModal({ paciente, citas, mes, numero, onCl
           </div>
         </div>
 
-        {/* Factura */}
-        <div id="factura-print" className="p-8 md:p-10">
-          {/* Cabecera */}
-          <div className="flex items-start justify-between mb-10">
-            <div>
-              <p className="text-2xl font-bold text-slate-800">FACTURA</p>
-              <p className="text-sm font-mono text-slate-500 mt-1">{numFac}</p>
-            </div>
+        {/* Vista previa */}
+        <div className="p-8 md:p-10">
+          <div className="mb-8">
+            <p className="text-2xl font-bold text-slate-800">FACTURA</p>
+            <p className="text-sm font-mono text-slate-500 mt-1">{numFac}</p>
           </div>
 
-          {/* Datos emisor / receptor */}
-          <div className="grid grid-cols-2 gap-8 mb-10">
+          <div className="grid grid-cols-2 gap-8 mb-8">
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Emitida por</p>
               <p className="font-semibold text-slate-800">{terapeuta.nombre}</p>
@@ -110,19 +228,17 @@ export default function FacturaMensualModal({ paciente, citas, mes, numero, onCl
             </div>
           </div>
 
-          {/* Fechas */}
-          <div className="grid grid-cols-2 gap-4 mb-10">
+          <div className="grid grid-cols-2 gap-4 mb-8">
             <div className="bg-slate-50 rounded-xl p-4">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Fecha de emisión</p>
               <p className="text-sm font-medium text-slate-700">{fechaHoy}</p>
             </div>
             <div className="bg-slate-50 rounded-xl p-4">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Última sesión</p>
-              <p className="text-sm font-medium text-slate-700">{ultimaCita ? fmtFecha(ultimaCita.fecha) : "-"}</p>
+              <p className="text-sm font-medium text-slate-700">{ultimaFecha}</p>
             </div>
           </div>
 
-          {/* Tabla de sesiones */}
           <table className="w-full mb-8">
             <thead>
               <tr className="border-b-2 border-slate-800">
@@ -145,8 +261,7 @@ export default function FacturaMensualModal({ paciente, citas, mes, numero, onCl
             </tbody>
           </table>
 
-          {/* Total */}
-          <div className="flex justify-end mb-10">
+          <div className="flex justify-end">
             <div className="w-64">
               <div className="flex justify-between py-2 text-sm text-slate-600">
                 <span>{totalSesiones} sesión{totalSesiones !== 1 ? "es" : ""} × {paciente.sesionPrecio} €</span>
@@ -161,19 +276,6 @@ export default function FacturaMensualModal({ paciente, citas, mes, numero, onCl
                 <span className="text-violet-600">{totalImporte},00 €</span>
               </div>
             </div>
-          </div>
-
-          {/* Estado de pago */}
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-5 py-3 flex items-center gap-3 mb-8">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0" />
-            <p className="text-sm font-semibold text-emerald-700">Pago recibido — Gracias</p>
-          </div>
-
-          {/* Pie */}
-          <div className="border-t border-slate-100 pt-6 text-center">
-            <p className="text-xs text-slate-400">
-              Documento emitido por PsicoGestión · {terapeuta.email} · {fechaHoy}
-            </p>
           </div>
         </div>
       </div>
