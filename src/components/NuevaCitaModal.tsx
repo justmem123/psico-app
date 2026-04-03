@@ -1,19 +1,27 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Modal from "./ui/Modal";
 import { useApp } from "@/lib/store";
 
-interface Props { open: boolean; onClose: () => void; fechaInicial?: string; }
+interface Props { open: boolean; onClose: () => void; fechaInicial?: string; horaInicial?: string; }
 
-export default function NuevaCitaModal({ open, onClose, fechaInicial }: Props) {
+export default function NuevaCitaModal({ open, onClose, fechaInicial, horaInicial }: Props) {
   const { pacientes, addCita } = useApp();
   const [form, setForm] = useState({
     pacienteId: "",
     fecha:      fechaInicial ?? new Date().toISOString().split("T")[0],
-    hora:       "09:00",
+    hora:       horaInicial ?? "09:00",
     duracion:   50,
     notas:      "",
   });
+
+  useEffect(() => {
+    if (open) setForm(p => ({
+      ...p,
+      fecha: fechaInicial ?? p.fecha,
+      hora:  horaInicial  ?? p.hora,
+    }));
+  }, [open, fechaInicial, horaInicial]);
 
   const set = (k: string, v: string | number) => setForm(p => ({ ...p, [k]: v }));
 

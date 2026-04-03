@@ -7,7 +7,7 @@ import CitaDetailModal from "@/components/CitaDetailModal";
 
 type Vista = "dia" | "semana" | "mes";
 
-const HORAS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
+const HORAS = ["07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00"];
 const DIAS_CORTO  = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 const DIAS_LARGO  = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -43,8 +43,9 @@ export default function AgendaPage() {
   const [semana,    setSemana]    = useState(() => getMonday(new Date()));
   const [diaActual, setDiaActual] = useState(() => new Date());
   const [mesActual, setMesActual] = useState(() => new Date());
-  const [modal,     setModal]     = useState(false);
-  const [citaSelId, setCitaSelId] = useState<string | null>(null);
+  const [modal,        setModal]       = useState(false);
+  const [citaSelId,    setCitaSelId]   = useState<string | null>(null);
+  const [nuevaHora,    setNuevaHora]   = useState<string | undefined>();
 
   const hoy = fmt(new Date());
 
@@ -152,38 +153,48 @@ export default function AgendaPage() {
 
       {/* ─── VISTA DÍA ─────────────────────────────────────────────── */}
       {vista === "dia" && (
-        <div className="flex-1 overflow-y-auto">
-          <p className="text-sm font-medium text-slate-500 mb-3 sm:hidden capitalize">{titulo}</p>
-          {citasDelDia.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-100 py-16 flex flex-col items-center gap-3 text-center">
-              <CalendarDays className="w-10 h-10 text-slate-200" />
-              <p className="text-slate-400 text-sm">No hay citas este día</p>
-              <button onClick={() => setModal(true)} className="text-violet-600 text-sm font-semibold hover:underline">+ Añadir cita</button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {citasDelDia.map(cita => {
-                const pac = pacientes.find(p => p.id === cita.pacienteId);
-                if (!pac) return null;
-                return (
-                  <div key={cita.id} onClick={() => setCitaSelId(cita.id)}
-                    className={`flex items-center gap-4 bg-white rounded-xl border-l-4 px-4 py-3.5 shadow-sm cursor-pointer hover:shadow-md transition-shadow ${estadoColor[cita.estado]}`}>
-                    <div className="text-center w-12 flex-shrink-0">
-                      <p className="text-sm font-bold">{cita.hora}</p>
-                      <p className="text-xs opacity-60">{cita.duracion}'</p>
-                    </div>
-                    <div className={`w-9 h-9 rounded-full ${pac.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
-                      {pac.nombre.split(" ").map(n => n[0]).join("").slice(0,2)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{pac.nombre}</p>
-                      <p className="text-xs opacity-60">{pac.sesionPrecio} €</p>
-                    </div>
+        <div className="flex-1 bg-white rounded-2xl border border-slate-100 overflow-hidden flex flex-col">
+          <p className="text-sm font-medium text-slate-500 px-4 py-2.5 border-b border-slate-100 sm:hidden capitalize">{titulo}</p>
+          <div className="overflow-y-auto flex-1">
+            {HORAS.map(hora => {
+              const citasHora = citasDelDia.filter(c => c.hora === hora);
+              return (
+                <div key={hora}
+                  className="flex border-b border-slate-50 min-h-[64px] group cursor-pointer hover:bg-violet-50/40 transition-colors"
+                  onClick={() => { setNuevaHora(hora); setModal(true); }}>
+                  {/* Etiqueta hora */}
+                  <div className="w-16 flex-shrink-0 py-3 px-3 flex items-start">
+                    <span className="text-xs text-slate-400 font-medium">{hora}</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  {/* Contenido */}
+                  <div className="flex-1 py-2 pr-3 flex flex-col gap-1.5">
+                    {citasHora.length === 0 && (
+                      <span className="text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+                        + Nueva cita
+                      </span>
+                    )}
+                    {citasHora.map(cita => {
+                      const pac = pacientes.find(p => p.id === cita.pacienteId);
+                      if (!pac) return null;
+                      return (
+                        <div key={cita.id}
+                          onClick={e => { e.stopPropagation(); setCitaSelId(cita.id); }}
+                          className={`flex items-center gap-3 rounded-xl border-l-4 px-3 py-2.5 cursor-pointer hover:opacity-80 transition-opacity ${estadoColor[cita.estado]}`}>
+                          <div className={`w-7 h-7 rounded-full ${pac.color} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}>
+                            {pac.nombre.split(" ").map(n => n[0]).join("").slice(0,2)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm truncate">{pac.nombre}</p>
+                            <p className="text-xs opacity-60">{cita.duracion} min · {pac.sesionPrecio} €</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -304,7 +315,8 @@ export default function AgendaPage() {
         ))}
       </div>
 
-      <NuevaCitaModal open={modal} onClose={() => setModal(false)} />
+      <NuevaCitaModal open={modal} onClose={() => { setModal(false); setNuevaHora(undefined); }}
+        fechaInicial={fmt(diaActual)} horaInicial={nuevaHora} />
       <CitaDetailModal citaId={citaSelId} onClose={() => setCitaSelId(null)} />
     </div>
   );
