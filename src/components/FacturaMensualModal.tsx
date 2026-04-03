@@ -7,13 +7,24 @@ import { createClient } from "@/lib/supabase/client";
 interface Props {
   paciente: Paciente;
   citas: Cita[];
-  mes: string;        // "2026-01"
+  periodo: string;    // "2026-T1"
   numero: number;
   onClose: () => void;
 }
 
 const MESES_LARGO = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const MESES_CORTO = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+
+function periodoLabel(periodo: string) {
+  const [y, t] = periodo.split("-");
+  const labels: Record<string, string> = {
+    T1: `1er Trimestre ${y} — Enero · Febrero · Marzo`,
+    T2: `2º Trimestre ${y} — Abril · Mayo · Junio`,
+    T3: `3er Trimestre ${y} — Julio · Agosto · Septiembre`,
+    T4: `4º Trimestre ${y} — Octubre · Noviembre · Diciembre`,
+  };
+  return labels[t] ?? `${t} ${y}`;
+}
 
 function fmtFecha(f: string) {
   const d = new Date(f + "T00:00:00");
@@ -25,9 +36,9 @@ function fmtFechaCorta(f: string) {
   return `${d.getDate()} ${MESES_CORTO[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function numFactura(mes: string, numero: number) {
-  const [year] = mes.split("-");
-  return `FAC${year}-${String(numero).padStart(3, "0")}`;
+function numFactura(periodo: string, numero: number) {
+  const [year, t] = periodo.split("-");
+  return `FAC${year}-${t}-${String(numero).padStart(3, "0")}`;
 }
 
 type Terapeuta = {
@@ -139,7 +150,7 @@ function buildPrintHTML(
 </html>`;
 }
 
-export default function FacturaMensualModal({ paciente, citas, mes, numero, onClose }: Props) {
+export default function FacturaMensualModal({ paciente, citas, periodo, numero, onClose }: Props) {
   const supabase = createClient();
   const [terapeuta, setTerapeuta] = useState<Terapeuta>({
     nombre: "", email: "", telefono: "", cifNif: "", colegiado: "", direccionFacturacion: "",
@@ -166,9 +177,8 @@ export default function FacturaMensualModal({ paciente, citas, mes, numero, onCl
   const totalSesiones = citas.length;
   const totalImporte = totalSesiones * paciente.sesionPrecio;
 
-  const [year, month] = mes.split("-");
-  const mesLabel = `${MESES_LARGO[parseInt(month) - 1]} ${year}`;
-  const numFac = numFactura(mes, numero);
+  const numFac = numFactura(periodo, numero);
+  const mesLabel = periodoLabel(periodo);
   const fechaHoy = fmtFecha(new Date().toISOString().split("T")[0]);
   const ultimaFecha = ultimaCita ? fmtFecha(ultimaCita.fecha) : "-";
 
@@ -189,7 +199,7 @@ export default function FacturaMensualModal({ paciente, citas, mes, numero, onCl
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Toolbar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-800">Factura mensual — {mesLabel}</h2>
+          <h2 className="font-semibold text-slate-800">Factura trimestral — {mesLabel}</h2>
           <div className="flex items-center gap-2">
             <button onClick={imprimir}
               className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
