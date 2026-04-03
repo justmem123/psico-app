@@ -8,9 +8,19 @@ body {
 }
 
 @media print {
-  body * { visibility: hidden; }
-  #factura-print, #factura-print * { visibility: visible; }
-  #factura-print { position: fixed; left: 0; top: 0; width: 100%; padding: 40px; background: white; }
+  @page { margin: 1cm; size: A4; }
+  html, body { height: auto !important; overflow: visible !important; }
+  body > * { display: none !important; }
+  #factura-print {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white;
+    padding: 0;
+  }
+  #factura-print * { visibility: visible; }
 }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
