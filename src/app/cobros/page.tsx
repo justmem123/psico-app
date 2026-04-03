@@ -6,6 +6,8 @@ import { useApp } from "@/lib/store";
 import type { Cita } from "@/lib/store";
 import CitaDetailModal from "@/components/CitaDetailModal";
 import FacturaModal from "@/components/FacturaModal";
+import FacturaMensualModal from "@/components/FacturaMensualModal";
+import type { Paciente } from "@/lib/store";
 
 type Filtro = "todos" | "pendiente" | "pagado" | "debe";
 
@@ -35,6 +37,7 @@ function CobrosContent() {
   const [filtro,     setFiltro]     = useState<Filtro>("todos");
   const [citaSelId,  setCitaSelId]  = useState<string | null>(null);
   const [facturaCita, setFacturaCita] = useState<Cita | null>(null);
+  const [facturaMensual, setFacturaMensual] = useState<{ paciente: Paciente; citas: Cita[]; mes: string } | null>(null);
 
   useEffect(() => {
     const f = searchParams.get("f");
@@ -229,8 +232,121 @@ function CobrosContent() {
         })}
       </div>
 
+      {/* Facturas mensuales */}
+      <div className="mt-8">
+        <h2 className="text-base font-bold text-slate-800 mb-4">Facturas por mes</h2>
+        {(() => {
+          // Agrupar citas pagadas por paciente + mes
+          const grupos: Record<string, { paciente: Paciente; citas: Cita[]; mes: string }> = {};
+          citas
+            .filter(c => c.estadoPago === "pagado")
+            .forEach(c => {
+              const pac = getPac(c.pacienteId);
+              if (!pac) return;
+              const mes = c.fecha.slice(0, 7); // "2026-01"
+              const key = `${pac.id}-${mes}`;
+              if (!grupos[key]) grupos[key] = { paciente: pac, citas: [], mes };
+              grupos[key].citas.push(c);
+            });
+
+          const lista = Object.values(grupos).sort((a, b) =>
+            b.mes.localeCompare(a.mes) || a.paciente.nombre.localeCompare(b.paciente.nombre)
+          );
+
+          if (lista.length === 0) return (
+            <div className="bg-white rounded-2xl border border-slate-100 py-12 text-center text-slate-400 text-sm">
+              No hay sesiones pagadas
+            </div>
+          );
+
+          const [year, month] = lista[0]?.mes.split("-") ?? [];
+          const mesActual = lista[0]?.mes;
+          const mesesUnicos = [...new Set(lista.map(g => g.mes))];
+
+          return (
+            <>
+              {mesesUnicos.map(mes => {
+                const [y, m] = mes.split("-");
+                const mesLabel = `${MESES[parseInt(m) - 1]} ${y}`;
+                const gruposMes = lista.filter(g => g.mes === mes);
+                return (
+                  <div key={mes} className="mb-6">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">{mesLabel}</p>
+
+                    {/* Desktop */}
+                    <div className="hidden md:block bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-slate-100 bg-slate-50">
+                            <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Paciente</th>
+                            <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Sesiones</th>
+                            <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Total</th>
+                            <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Factura</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {gruposMes.map(({ paciente, citas: cs, mes: m2 }) => (
+                            <tr key={`${paciente.id}-${m2}`} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-8 h-8 rounded-full ${paciente.color} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}>
+                                    {paciente.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                                  </div>
+                                  <p className="text-sm font-semibold text-slate-800">{paciente.nombre}</p>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-center text-sm text-slate-600">{cs.length}</td>
+                              <td className="px-4 py-4 text-right font-bold text-slate-800">{cs.length * paciente.sesionPrecio} €</td>
+                              <td className="px-6 py-4 text-center">
+                                <button
+                                  onClick={() => setFacturaMensual({ paciente, citas: cs, mes: m2 })}
+                                  className="flex items-center gap-1 text-xs bg-violet-50 text-violet-600 font-semibold px-3 py-1.5 rounded-lg hover:bg-violet-100 transition-colors mx-auto whitespace-nowrap">
+                                  <FileText className="w-3 h-3" /> Generar
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Móvil */}
+                    <div className="md:hidden space-y-3">
+                      {gruposMes.map(({ paciente, citas: cs, mes: m2 }) => (
+                        <div key={`${paciente.id}-${m2}`} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full ${paciente.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
+                            {paciente.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-slate-800 text-sm">{paciente.nombre}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">{cs.length} sesión{cs.length !== 1 ? "es" : ""} · {cs.length * paciente.sesionPrecio} €</p>
+                          </div>
+                          <button
+                            onClick={() => setFacturaMensual({ paciente, citas: cs, mes: m2 })}
+                            className="flex items-center gap-1 text-xs bg-violet-50 text-violet-600 font-semibold px-3 py-2 rounded-lg hover:bg-violet-100 transition-colors whitespace-nowrap">
+                            <FileText className="w-3 h-3" /> Factura
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          );
+        })()}
+      </div>
+
       <CitaDetailModal citaId={citaSelId} onClose={() => setCitaSelId(null)} />
       {facturaCita && <FacturaModal cita={facturaCita} onClose={() => setFacturaCita(null)} />}
+      {facturaMensual && (
+        <FacturaMensualModal
+          paciente={facturaMensual.paciente}
+          citas={facturaMensual.citas}
+          mes={facturaMensual.mes}
+          onClose={() => setFacturaMensual(null)}
+        />
+      )}
     </div>
   );
 }
