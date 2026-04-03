@@ -15,6 +15,14 @@ interface Props {
 const MESES_LARGO = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 const MESES_CORTO = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 
+function fechaEmision(periodo: string) {
+  const [y, t] = periodo.split("-");
+  const lastDay: Record<string, string> = {
+    T1: `${y}-03-31`, T2: `${y}-06-30`, T3: `${y}-09-30`, T4: `${y}-12-31`,
+  };
+  return lastDay[t] ?? new Date().toISOString().split("T")[0];
+}
+
 function periodoLabel(periodo: string) {
   const [y, t] = periodo.split("-");
   const labels: Record<string, string> = {
@@ -179,7 +187,7 @@ export default function FacturaMensualModal({ paciente, citas, periodo, numero, 
 
   const numFac = numFactura(periodo, numero);
   const mesLabel = periodoLabel(periodo);
-  const fechaHoy = fmtFecha(new Date().toISOString().split("T")[0]);
+  const fechaHoy = fmtFecha(fechaEmision(periodo));
   const ultimaFecha = ultimaCita ? fmtFecha(ultimaCita.fecha) : "-";
 
   function imprimir() {
