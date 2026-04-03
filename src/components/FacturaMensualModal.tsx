@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Printer, X, Brain } from "lucide-react";
+import { Printer, X } from "lucide-react";
 import type { Paciente, Cita } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 
@@ -8,6 +8,7 @@ interface Props {
   paciente: Paciente;
   citas: Cita[];      // ya filtradas: mismo paciente, mismo mes, pagadas
   mes: string;        // "2026-01"
+  numero: number;     // número secuencial de la factura
   onClose: () => void;
 }
 
@@ -24,13 +25,12 @@ function fmtFechaCorta(f: string) {
   return `${d.getDate()} ${MESES_CORTO[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function numFactura(pacienteId: string, mes: string) {
-  const n = parseInt(pacienteId.replace(/\D/g, "").slice(0, 4) || "1", 10);
-  const [year, month] = mes.split("-");
-  return `FAC-${year}-${month}-${String(n % 9999 + 1).padStart(4, "0")}`;
+function numFactura(mes: string, numero: number) {
+  const [year] = mes.split("-");
+  return `FAC${year}-${String(numero).padStart(3, "0")}`;
 }
 
-export default function FacturaMensualModal({ paciente, citas, mes, onClose }: Props) {
+export default function FacturaMensualModal({ paciente, citas, mes, numero, onClose }: Props) {
   const supabase = createClient();
   const [terapeuta, setTerapeuta] = useState({ nombre: "", email: "", telefono: "", cifNif: "", colegiado: "", direccionFacturacion: "" });
 
@@ -57,7 +57,7 @@ export default function FacturaMensualModal({ paciente, citas, mes, onClose }: P
 
   const [year, month] = mes.split("-");
   const mesLabel = `${MESES_LARGO[parseInt(month) - 1]} ${year}`;
-  const numFac = numFactura(paciente.id, mes);
+  const numFac = numFactura(mes, numero);
   const fechaHoy = fmtFecha(new Date().toISOString().split("T")[0]);
 
   return (
@@ -83,17 +83,8 @@ export default function FacturaMensualModal({ paciente, citas, mes, onClose }: P
         <div id="factura-print" className="p-8 md:p-10">
           {/* Cabecera */}
           <div className="flex items-start justify-between mb-10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center flex-shrink-0">
-                <Brain className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="font-bold text-slate-800 text-lg leading-tight">PsicoGestión</p>
-                <p className="text-xs text-slate-400">Consulta de psicología</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-violet-600">FACTURA</p>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">FACTURA</p>
               <p className="text-sm font-mono text-slate-500 mt-1">{numFac}</p>
             </div>
           </div>

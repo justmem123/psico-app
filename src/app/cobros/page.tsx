@@ -37,7 +37,7 @@ function CobrosContent() {
   const [filtro,     setFiltro]     = useState<Filtro>("todos");
   const [citaSelId,  setCitaSelId]  = useState<string | null>(null);
   const [facturaCita, setFacturaCita] = useState<Cita | null>(null);
-  const [facturaMensual, setFacturaMensual] = useState<{ paciente: Paciente; citas: Cita[]; mes: string } | null>(null);
+  const [facturaMensual, setFacturaMensual] = useState<{ paciente: Paciente; citas: Cita[]; mes: string; numero: number } | null>(null);
 
   useEffect(() => {
     const f = searchParams.get("f");
@@ -249,9 +249,10 @@ function CobrosContent() {
               grupos[key].citas.push(c);
             });
 
-          const lista = Object.values(grupos).sort((a, b) =>
-            b.mes.localeCompare(a.mes) || a.paciente.nombre.localeCompare(b.paciente.nombre)
-          );
+          const lista = Object.values(grupos)
+            .sort((a, b) => a.mes.localeCompare(b.mes) || a.paciente.nombre.localeCompare(b.paciente.nombre))
+            .map((g, i) => ({ ...g, numero: i + 1 }))
+            .reverse();
 
           if (lista.length === 0) return (
             <div className="bg-white rounded-2xl border border-slate-100 py-12 text-center text-slate-400 text-sm">
@@ -285,7 +286,7 @@ function CobrosContent() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                          {gruposMes.map(({ paciente, citas: cs, mes: m2 }) => (
+                          {gruposMes.map(({ paciente, citas: cs, mes: m2, numero }) => (
                             <tr key={`${paciente.id}-${m2}`} className="hover:bg-slate-50 transition-colors">
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
@@ -299,7 +300,7 @@ function CobrosContent() {
                               <td className="px-4 py-4 text-right font-bold text-slate-800">{cs.length * paciente.sesionPrecio} €</td>
                               <td className="px-6 py-4 text-center">
                                 <button
-                                  onClick={() => setFacturaMensual({ paciente, citas: cs, mes: m2 })}
+                                  onClick={() => setFacturaMensual({ paciente, citas: cs, mes: m2, numero })}
                                   className="flex items-center gap-1 text-xs bg-violet-50 text-violet-600 font-semibold px-3 py-1.5 rounded-lg hover:bg-violet-100 transition-colors mx-auto whitespace-nowrap">
                                   <FileText className="w-3 h-3" /> Generar
                                 </button>
@@ -312,7 +313,7 @@ function CobrosContent() {
 
                     {/* Móvil */}
                     <div className="md:hidden space-y-3">
-                      {gruposMes.map(({ paciente, citas: cs, mes: m2 }) => (
+                      {gruposMes.map(({ paciente, citas: cs, mes: m2, numero }) => (
                         <div key={`${paciente.id}-${m2}`} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-full ${paciente.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
                             {paciente.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
@@ -322,7 +323,7 @@ function CobrosContent() {
                             <p className="text-xs text-slate-400 mt-0.5">{cs.length} sesión{cs.length !== 1 ? "es" : ""} · {cs.length * paciente.sesionPrecio} €</p>
                           </div>
                           <button
-                            onClick={() => setFacturaMensual({ paciente, citas: cs, mes: m2 })}
+                            onClick={() => setFacturaMensual({ paciente, citas: cs, mes: m2, numero })}
                             className="flex items-center gap-1 text-xs bg-violet-50 text-violet-600 font-semibold px-3 py-2 rounded-lg hover:bg-violet-100 transition-colors whitespace-nowrap">
                             <FileText className="w-3 h-3" /> Factura
                           </button>
@@ -344,6 +345,7 @@ function CobrosContent() {
           paciente={facturaMensual.paciente}
           citas={facturaMensual.citas}
           mes={facturaMensual.mes}
+          numero={facturaMensual.numero}
           onClose={() => setFacturaMensual(null)}
         />
       )}
