@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { User, Mail, Lock, Save, Loader2, CheckCircle, FileText, MapPin } from "lucide-react";
 import PhoneInput from "@/components/ui/PhoneInput";
+import GoogleCalendarAjustes from "@/components/GoogleCalendarAjustes";
 
 export default function AjustesPage() {
   const supabase = createClient();
@@ -138,6 +139,8 @@ export default function AjustesPage() {
           </button>
         </form>
       </section>
+
+      <GoogleCalendarAjustes />
 
       {/* Contraseña */}
       <section className="bg-white rounded-2xl border border-slate-100 p-6">

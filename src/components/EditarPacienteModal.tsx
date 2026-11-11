@@ -58,8 +58,8 @@ export default function EditarPacienteModal({ paciente, onClose }: Props) {
           </div>
           <div>
             <label className={labelCls}>Precio por sesión (€) *</label>
-            <input type="number" className={inputCls} min={0} step={5}
-              value={form.sesionPrecio} onChange={e => set("sesionPrecio", parseInt(e.target.value))} required />
+            <input type="number" className={inputCls} min={0} step="any"
+              value={form.sesionPrecio} onChange={e => set("sesionPrecio", parseFloat(e.target.value) || 0)} required />
           </div>
         </div>
 

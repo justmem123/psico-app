@@ -38,6 +38,18 @@ interface AppState {
   marcarEstado:  (citaId: string, estado: EstadoCita) => Promise<void>;
   updateCita:    (citaId: string, changes: Partial<Omit<Cita,"id">>) => Promise<void>;
   deleteCita:    (citaId: string) => Promise<void>;
+  // Google Calendar
+  google:            GoogleEstado;
+  sincronizarGoogle: () => Promise<void>;
+}
+
+export interface GoogleSinAsignar { clave: string; titulo: string; ocurrencias: number; proxima: string; }
+export interface GoogleEstado {
+  configurado:  boolean | null;   // null = aún no se sabe
+  sincronizando: boolean;
+  error?:       string;
+  sinAsignar:   GoogleSinAsignar[];
+  resumen?:     { creadas: number; actualizadas: number; borradas: number; eventos: number; hora: string };
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -49,6 +61,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [userId,    setUserId]    = useState<string | null>(null);
+  const [google,    setGoogle]    = useState<GoogleEstado>({ configurado: null, sincronizando: false, sinAsignar: [] });
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
@@ -56,7 +69,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Cargar datos desde Supabase
   const cargar = useCallback(async () => {
-    setLoading(true);
     const [{ data: pacs }, { data: cts }] = await Promise.all([
       supabase.from("pacientes").select("*").order("nombre"),
       supabase.from("citas").select("*").order("fecha").order("hora"),
@@ -74,14 +86,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  // Trae las citas de Google Calendar; si cambia algo, recarga los datos
+  const sincronizarGoogle = useCallback(async () => {
+    setGoogle(g => ({ ...g, sincronizando: true, error: undefined }));
+    try {
+      const res  = await fetch("/api/google-sync", { method: "POST" });
+      const data = await res.json();
+      if (!data.configurado) { setGoogle({ configurado: false, sincronizando: false, sinAsignar: [] }); return; }
+      if (data.error)        { setGoogle(g => ({ ...g, configurado: true, sincronizando: false, error: data.error })); return; }
+      setGoogle({
+        configurado: true, sincronizando: false, sinAsignar: data.sinAsignar ?? [],
+        resumen: { creadas: data.creadas, actualizadas: data.actualizadas, borradas: data.borradas, eventos: data.eventos,
+                   hora: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) },
+      });
+      if (data.creadas || data.actualizadas || data.borradas) await cargar();
+    } catch {
+      setGoogle(g => ({ ...g, sincronizando: false, error: "No se pudo conectar con el servidor" }));
+    }
+  }, [cargar]);
+
+  useEffect(() => { cargar().then(() => sincronizarGoogle()); }, [cargar, sincronizarGoogle]);
 
   async function addPaciente(p: Omit<Paciente,"id">) {
     const color = COLORES[pacientes.length % COLORES.length];
     const { data } = await supabase.from("pacientes").insert({
       nombre: p.nombre, email: p.email, telefono: p.telefono,
       sesion_precio: p.sesionPrecio, color, dni: p.dni, direccion: p.direccion,
-      user_id: userId,
+      ...(userId ? { user_id: userId } : {}),
     }).select().single();
     if (data) setPacientes(prev => [...prev, {
       id: data.id, nombre: data.nombre, email: data.email ?? "",
@@ -94,7 +125,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase.from("citas").insert({
       paciente_id: c.pacienteId, fecha: c.fecha, hora: c.hora,
       duracion: c.duracion, estado: c.estado, estado_pago: c.estadoPago, notas: c.notas,
-      user_id: userId,
+      ...(userId ? { user_id: userId } : {}),
     }).select().single();
     if (data) setCitas(prev => [...prev, { id: data.id, pacienteId: data.paciente_id, fecha: data.fecha, hora: data.hora.slice(0,5), duracion: data.duracion, estado: data.estado, estadoPago: data.estado_pago, notas: data.notas ?? "" }]);
   }
@@ -139,7 +170,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <Ctx.Provider value={{ citas, pacientes, loading, addCita, addPaciente, updatePaciente, marcarPagado, marcarEstado, updateCita, deleteCita }}>
+    <Ctx.Provider value={{ citas, pacientes, loading, addCita, addPaciente, updatePaciente, marcarPagado, marcarEstado, updateCita, deleteCita, google, sincronizarGoogle }}>
       {children}
     </Ctx.Provider>
   );

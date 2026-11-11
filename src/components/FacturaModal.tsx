@@ -22,20 +22,131 @@ function numFactura(citaId: string) {
   return `FAC-${new Date().getFullYear()}-${String(n % 9999 + 1).padStart(4,"0")}`;
 }
 
+type Terapeuta = {
+  nombre: string; email: string; telefono: string;
+  cifNif: string; colegiado: string; direccionFacturacion: string;
+};
+
+function buildPrintHTML(
+  terapeuta: Terapeuta,
+  pac: { nombre: string; dni?: string; direccion?: string; email?: string; telefono?: string; sesionPrecio: number },
+  cita: { hora: string; duracion: number; notas?: string },
+  numFac: string,
+  fechaHoy: string,
+  fechaCita: string,
+) {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Factura ${numFac}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1e293b; background: white; padding: 28px 36px; font-size: 11px; line-height: 1.4; }
+    @page { margin: 0.8cm; size: A4; }
+  </style>
+</head>
+<body>
+  <!-- Cabecera -->
+  <div style="margin-bottom:20px">
+    <p style="font-size:22px;font-weight:700;color:#1e293b">FACTURA</p>
+    <p style="font-size:11px;font-family:monospace;color:#64748b;margin-top:3px">${numFac}</p>
+  </div>
+
+  <!-- Emisor / Receptor -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:20px">
+    <div>
+      <p style="font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Emitida por</p>
+      <p style="font-weight:600;color:#1e293b;font-size:11px">${terapeuta.nombre}</p>
+      ${terapeuta.cifNif ? `<p style="font-size:10px;color:#64748b;margin-top:2px">NIF/CIF: ${terapeuta.cifNif}</p>` : ""}
+      ${terapeuta.colegiado ? `<p style="font-size:10px;color:#64748b">Nº colegiado: ${terapeuta.colegiado}</p>` : ""}
+      ${terapeuta.direccionFacturacion ? `<p style="font-size:10px;color:#64748b">${terapeuta.direccionFacturacion}</p>` : ""}
+      ${terapeuta.email ? `<p style="font-size:10px;color:#64748b">${terapeuta.email}</p>` : ""}
+      ${terapeuta.telefono ? `<p style="font-size:10px;color:#64748b">${terapeuta.telefono}</p>` : ""}
+    </div>
+    <div>
+      <p style="font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Facturado a</p>
+      <p style="font-weight:600;color:#1e293b;font-size:11px">${pac.nombre}</p>
+      ${pac.dni ? `<p style="font-size:10px;color:#64748b;margin-top:2px">DNI/NIE: ${pac.dni}</p>` : ""}
+      ${pac.direccion ? `<p style="font-size:10px;color:#64748b">${pac.direccion}</p>` : ""}
+      ${pac.email ? `<p style="font-size:10px;color:#64748b">${pac.email}</p>` : ""}
+      ${pac.telefono ? `<p style="font-size:10px;color:#64748b">${pac.telefono}</p>` : ""}
+    </div>
+  </div>
+
+  <!-- Fechas -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+    <div style="background:#f8fafc;border-radius:8px;padding:8px 10px">
+      <p style="font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px">Fecha de emisión</p>
+      <p style="font-size:11px;font-weight:500;color:#334155">${fechaHoy}</p>
+    </div>
+    <div style="background:#f8fafc;border-radius:8px;padding:8px 10px">
+      <p style="font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px">Fecha de sesión</p>
+      <p style="font-size:11px;font-weight:500;color:#334155">${fechaCita}</p>
+    </div>
+  </div>
+
+  <!-- Tabla servicio -->
+  <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+    <thead>
+      <tr style="border-bottom:2px solid #1e293b">
+        <th style="text-align:left;padding-bottom:6px;font-size:9px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Descripción</th>
+        <th style="text-align:center;padding-bottom:6px;font-size:9px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Duración</th>
+        <th style="text-align:right;padding-bottom:6px;font-size:9px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Importe</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:8px 0;border-bottom:1px solid #f1f5f9">
+          <p style="margin:0;font-weight:600;color:#1e293b;font-size:11px">Sesión de psicología</p>
+          <p style="margin:2px 0 0;font-size:10px;color:#64748b">${fechaCita} · ${cita.hora}h${cita.notas ? ` · ${cita.notas}` : ""}</p>
+        </td>
+        <td style="padding:8px 6px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:11px;color:#475569;white-space:nowrap">${cita.duracion} min</td>
+        <td style="padding:8px 0;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;color:#1e293b;font-size:11px">${pac.sesionPrecio} €</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Total -->
+  <div style="display:flex;justify-content:flex-end">
+    <div style="width:220px">
+      <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569">
+        <span>Subtotal</span>
+        <span>${pac.sesionPrecio} €</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569;border-bottom:1px solid #f1f5f9">
+        <span>IVA (0%)</span>
+        <span>0,00 €</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:700;font-size:14px;color:#1e293b">
+        <span>Total</span>
+        <span style="color:#7c3aed">${pac.sesionPrecio},00 €</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
 export default function FacturaModal({ cita, onClose }: Props) {
   const { pacientes } = useApp();
   const supabase = createClient();
   const pac = pacientes.find(p => p.id === cita.pacienteId);
-  const [terapeuta, setTerapeuta] = useState({ nombre: "", email: "", telefono: "" });
+  const [terapeuta, setTerapeuta] = useState({
+    nombre: "", email: "", telefono: "", cifNif: "", colegiado: "", direccionFacturacion: "",
+  });
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
         const m = data.user.user_metadata ?? {};
         setTerapeuta({
-          nombre:   `${m.nombre ?? ""} ${m.apellidos ?? ""}`.trim() || "Psicólogo/a",
-          email:    data.user.email ?? "",
-          telefono: m.telefono ?? "",
+          nombre:               `${m.nombre ?? ""} ${m.apellidos ?? ""}`.trim() || "Psicólogo/a",
+          email:                data.user.email ?? "",
+          telefono:             m.telefono ?? "",
+          cifNif:               m.cifNif ?? "",
+          colegiado:            m.colegiado ?? "",
+          direccionFacturacion: m.direccionFacturacion ?? "",
         });
       }
     });
@@ -48,7 +159,13 @@ export default function FacturaModal({ cita, onClose }: Props) {
   const fechaCita = fmtFecha(cita.fecha);
 
   function imprimir() {
-    window.print();
+    const html = buildPrintHTML(terapeuta, pac!, cita, numFac, fechaHoy, fechaCita);
+    const win = window.open("", "_blank", "width=800,height=900");
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); win.close(); }, 400);
   }
 
   return (
@@ -94,8 +211,11 @@ export default function FacturaModal({ cita, onClose }: Props) {
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Emitida por</p>
               <p className="font-semibold text-slate-800">{terapeuta.nombre || "Psicólogo/a"}</p>
-              {terapeuta.email    && <p className="text-sm text-slate-500 mt-1">{terapeuta.email}</p>}
-              {terapeuta.telefono && <p className="text-sm text-slate-500">{terapeuta.telefono}</p>}
+              {terapeuta.cifNif               && <p className="text-sm text-slate-500 mt-1">NIF/CIF: {terapeuta.cifNif}</p>}
+              {terapeuta.colegiado            && <p className="text-sm text-slate-500">Nº colegiado: {terapeuta.colegiado}</p>}
+              {terapeuta.direccionFacturacion && <p className="text-sm text-slate-500">{terapeuta.direccionFacturacion}</p>}
+              {terapeuta.email                && <p className="text-sm text-slate-500">{terapeuta.email}</p>}
+              {terapeuta.telefono             && <p className="text-sm text-slate-500">{terapeuta.telefono}</p>}
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Facturado a</p>

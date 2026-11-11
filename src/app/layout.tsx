@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { AppProvider } from "@/lib/store";
+import GoogleSinAsignarAviso from "@/components/GoogleSinAsignarModal";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppProvider>
           <Sidebar />
           <main className="ml-0 md:ml-60 min-h-screen pb-20 md:pb-0">{children}</main>
+          <GoogleSinAsignarAviso />
         </AppProvider>
       </body>
     </html>
