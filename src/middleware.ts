@@ -22,6 +22,9 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   // Si no está logueado y no está en /login → redirigir a /login
+  // El formulario de primera visita es público: el paciente no tiene cuenta.
+  if (request.nextUrl.pathname.startsWith("/primera-visita")) return supabaseResponse;
+
   if (!user && !request.nextUrl.pathname.startsWith("/login")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }

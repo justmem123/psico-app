@@ -14,6 +14,14 @@ export interface Paciente {
   color?:       string;
   dni?:         string;
   direccion?:   string;
+  // Formulario de primera visita
+  fechaNacimiento?:   string;
+  motivoConsulta?:    string;
+  primeraTerapia?:    boolean | null;
+  comoConocio?:       string;
+  consentimientoAt?:  string;
+  consentimientoVersion?: string;
+  nuevo?:             boolean;
 }
 
 export interface Cita {
@@ -77,6 +85,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       id: p.id, nombre: p.nombre, email: p.email ?? "",
       telefono: p.telefono ?? "", sesionPrecio: p.sesion_precio, color: p.color,
       dni: p.dni ?? "", direccion: p.direccion ?? "",
+      fechaNacimiento: p.fecha_nacimiento ?? "", motivoConsulta: p.motivo_consulta ?? "",
+      primeraTerapia: p.primera_terapia ?? null, comoConocio: p.como_conocio ?? "",
+      consentimientoAt: p.consentimiento_at ?? "", consentimientoVersion: p.consentimiento_version ?? "",
+      nuevo: p.nuevo ?? false,
     })));
     setCitas((cts ?? []).map(c => ({
       id: c.id, pacienteId: c.paciente_id, fecha: c.fecha,
@@ -105,7 +117,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [cargar]);
 
-  useEffect(() => { cargar().then(() => sincronizarGoogle()); }, [cargar, sincronizarGoogle]);
+  useEffect(() => {
+    // En el formulario público no hay sesión: no se carga nada.
+    if (window.location.pathname.startsWith("/primera-visita")) { setLoading(false); return; }
+    cargar().then(() => sincronizarGoogle());
+  }, [cargar, sincronizarGoogle]);
 
   async function addPaciente(p: Omit<Paciente,"id">) {
     const color = COLORES[pacientes.length % COLORES.length];
@@ -138,6 +154,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (changes.sesionPrecio!== undefined) dbChanges.sesion_precio= changes.sesionPrecio;
     if (changes.dni         !== undefined) dbChanges.dni          = changes.dni;
     if (changes.direccion   !== undefined) dbChanges.direccion    = changes.direccion;
+    if (changes.nuevo       !== undefined) dbChanges.nuevo        = changes.nuevo;
     await supabase.from("pacientes").update(dbChanges).eq("id", id);
     setPacientes(prev => prev.map(p => p.id === id ? { ...p, ...changes } : p));
   }

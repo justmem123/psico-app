@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
-import { Search, Plus, Phone, Mail, CalendarDays, CreditCard, ChevronRight, MapPin, CreditCard as IdCard, Pencil, Download } from "lucide-react";
+import { Search, Plus, Phone, Mail, CalendarDays, CreditCard, ChevronRight, MapPin, CreditCard as IdCard, Pencil, Download, Send, Sparkles, ShieldCheck, Cake } from "lucide-react";
 import { useApp } from "@/lib/store";
 import type { Paciente } from "@/lib/store";
 import NuevoPacienteModal from "@/components/NuevoPacienteModal";
 import EditarPacienteModal from "@/components/EditarPacienteModal";
+import InvitarPacienteModal from "@/components/InvitarPacienteModal";
 
 const estadoPagoColor: Record<string,string> = {
   pagado:    "bg-emerald-100 text-emerald-700",
@@ -34,7 +35,9 @@ function exportarCSV(pacientes: Paciente[]) {
 }
 
 export default function PacientesPage() {
-  const { pacientes, citas } = useApp();
+  const { pacientes, citas, updatePaciente } = useApp();
+  const [invitar,      setInvitar]      = useState(false);
+  const nuevos = pacientes.filter(p => p.nuevo).length;
   const [busqueda,     setBusqueda]     = useState("");
   const [seleccionado, setSeleccionado] = useState<string|null>(null);
   const [modal,        setModal]        = useState(false);
@@ -51,12 +54,16 @@ export default function PacientesPage() {
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-slate-800">Pacientes</h1>
-          <p className="text-slate-400 text-sm mt-0.5">{pacientes.length} pacientes activos</p>
+          <p className="text-slate-400 text-sm mt-0.5">{pacientes.length} pacientes activos{nuevos > 0 && <span className="ml-2 text-teal-600 font-medium">· {nuevos} nuevo{nuevos > 1 ? "s" : ""} por revisar</span>}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => exportarCSV(pacientes)}
             className="flex items-center gap-2 border border-slate-200 text-slate-600 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors">
             <Download className="w-4 h-4" /> <span className="hidden sm:inline">Exportar Excel</span>
+          </button>
+          <button onClick={() => setInvitar(true)}
+            className="flex items-center gap-2 border border-violet-200 text-violet-700 bg-violet-50 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-100 transition-colors">
+            <Send className="w-4 h-4" /> <span className="hidden sm:inline">Invitar paciente</span><span className="sm:hidden">Invitar</span>
           </button>
           <button onClick={() => setModal(true)} className="flex items-center gap-2 bg-violet-600 text-white px-3 md:px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors">
             <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Nuevo paciente</span><span className="sm:hidden">Nuevo</span>
@@ -84,7 +91,8 @@ export default function PacientesPage() {
                     {p.nombre.split(" ").map(n => n[0]).join("").slice(0,2)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`font-semibold text-sm truncate ${activo ? "text-violet-700" : "text-slate-800"}`}>{p.nombre}</p>
+                    <p className={`font-semibold text-sm truncate ${activo ? "text-violet-700" : "text-slate-800"}`}>{p.nombre}
+                      {p.nuevo && <span className="ml-2 align-middle text-[10px] font-semibold uppercase tracking-wide bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full">Nuevo</span>}</p>
                     <p className="text-xs text-slate-400">{nCitas} sesiones · {p.sesionPrecio} €/sesión</p>
                   </div>
                   <ChevronRight className={`w-4 h-4 flex-shrink-0 ${activo ? "text-violet-400" : "text-slate-300"}`} />
@@ -132,6 +140,30 @@ export default function PacientesPage() {
                   <div className="flex items-center gap-2 text-sm text-slate-600"><CalendarDays className="w-4 h-4 text-slate-400 flex-shrink-0" />{citasPaciente.length} sesiones en total</div>
                 </div>
               </div>
+              {(pacienteActivo.consentimientoAt || pacienteActivo.motivoConsulta) && (
+                <div className={`rounded-2xl border p-5 ${pacienteActivo.nuevo ? "bg-teal-50 border-teal-100" : "bg-white border-slate-100"}`}>
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <h3 className="font-semibold text-slate-800 flex items-center gap-2"><Sparkles className="w-4 h-4 text-teal-500" /> Formulario de primera visita</h3>
+                    {pacienteActivo.nuevo && (
+                      <button onClick={() => updatePaciente(pacienteActivo.id, { nuevo: false })}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors flex-shrink-0">Marcar revisado</button>
+                    )}
+                  </div>
+                  <div className="space-y-2 text-sm text-slate-600">
+                    {pacienteActivo.motivoConsulta && <p><span className="font-medium text-slate-700">Motivo:</span> {pacienteActivo.motivoConsulta}</p>}
+                    <div className="flex flex-wrap gap-x-5 gap-y-1">
+                      {pacienteActivo.fechaNacimiento && <span className="flex items-center gap-1.5"><Cake className="w-4 h-4 text-slate-400" />{new Date(pacienteActivo.fechaNacimiento).toLocaleDateString("es-ES")}</span>}
+                      {pacienteActivo.primeraTerapia != null && <span>{pacienteActivo.primeraTerapia ? "Primera vez en terapia" : "Ya ha ido a terapia"}</span>}
+                      {pacienteActivo.comoConocio && <span>Te conoció por: {pacienteActivo.comoConocio}</span>}
+                    </div>
+                    {pacienteActivo.consentimientoAt && (
+                      <p className="flex items-center gap-1.5 text-emerald-700"><ShieldCheck className="w-4 h-4" />
+                        Consentimiento aceptado el {new Date(pacienteActivo.consentimientoAt).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })}
+                        <span className="text-xs text-slate-400">({pacienteActivo.consentimientoVersion})</span></p>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-4">
                   <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide mb-1">Total cobrado</p>
@@ -169,6 +201,7 @@ export default function PacientesPage() {
 
       <NuevoPacienteModal open={modal} onClose={() => setModal(false)} />
       <EditarPacienteModal paciente={editando} onClose={() => setEditando(null)} />
+      <InvitarPacienteModal open={invitar} onClose={() => setInvitar(false)} />
     </div>
   );
 }

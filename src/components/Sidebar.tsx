@@ -23,7 +23,7 @@ export default function Sidebar() {
     router.push("/login");
   }
 
-  if (path === "/login") return null;
+  if (path === "/login" || path.startsWith("/primera-visita")) return null;
 
   return (
     <>
