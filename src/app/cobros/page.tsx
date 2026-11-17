@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, Clock, AlertCircle, TrendingUp, TrendingDown, FileText } from "lucide-react";
-import { useApp } from "@/lib/store";
+import { useApp, precioCita } from "@/lib/store";
 import type { Cita } from "@/lib/store";
 import CitaDetailModal from "@/components/CitaDetailModal";
 import FacturaModal from "@/components/FacturaModal";
@@ -31,67 +31,226 @@ function fmtFecha(f: string) {
   return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+type Periodo = "todo" | "mes" | "mes_pasado" | "trimestre" | "año" | "rango";
+
+const PERIODOS: { value: Periodo; label: string }[] = [
+  { value: "mes",        label: "Este mes" },
+  { value: "mes_pasado", label: "Mes pasado" },
+  { value: "trimestre",  label: "Este trimestre" },
+  { value: "año",        label: "Este año" },
+  { value: "todo",       label: "Todo" },
+  { value: "rango",      label: "Elegir fechas" },
+];
+
+const MESES_LARGO = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+// Rango [desde, hasta] en formato AAAA-MM-DD (vacío = sin límite)
+function rangoDe(p: Periodo, desde: string, hasta: string): [string, string] {
+  const hoy = new Date();
+  const y = hoy.getFullYear(), m = hoy.getMonth();
+  if (p === "mes")        return [iso(new Date(y, m, 1)),     iso(new Date(y, m + 1, 0))];
+  if (p === "mes_pasado") return [iso(new Date(y, m - 1, 1)), iso(new Date(y, m, 0))];
+  if (p === "trimestre")  { const t = Math.floor(m / 3) * 3; return [iso(new Date(y, t, 1)), iso(new Date(y, t + 3, 0))]; }
+  if (p === "año")        return [`${y}-01-01`, `${y}-12-31`];
+  if (p === "rango")      return [desde, hasta];
+  return ["", ""];
+}
+
+function tituloPeriodo(p: Periodo, [a, b]: [string, string]) {
+  if (p === "todo") return "Todo el historial";
+  if (p === "mes" || p === "mes_pasado") { const d = new Date(a + "T00:00:00"); return `${MESES_LARGO[d.getMonth()]} de ${d.getFullYear()}`; }
+  if (p === "trimestre") { const d = new Date(a + "T00:00:00"); return `${Math.floor(d.getMonth() / 3) + 1}.º trimestre de ${d.getFullYear()}`; }
+  if (p === "año") return `Año ${a.slice(0, 4)}`;
+  if (a && b) return `Del ${fmtFecha(a)} al ${fmtFecha(b)}`;
+  if (a) return `Desde el ${fmtFecha(a)}`;
+  if (b) return `Hasta el ${fmtFecha(b)}`;
+  return "Elige las fechas";
+}
+
 function CobrosContent() {
   const { citas, pacientes, marcarPagado } = useApp();
   const searchParams = useSearchParams();
   const [filtro,     setFiltro]     = useState<Filtro>("todos");
+  const [periodo,    setPeriodo]    = useState<Periodo>("todo");
+  const [desde,      setDesde]      = useState("");
+  const [hasta,      setHasta]      = useState("");
+  const [pacFiltro,  setPacFiltro]  = useState("");
+  const [verDetalle, setVerDetalle] = useState(false);
   const [citaSelId,  setCitaSelId]  = useState<string | null>(null);
   const [facturaCita, setFacturaCita] = useState<Cita | null>(null);
   const [facturaMensual, setFacturaMensual] = useState<{ paciente: Paciente; citas: Cita[]; periodo: string; numero: number } | null>(null);
 
+  // Filtros desde la URL: ?f=pagado&p=mes&pac=<id>&desde=AAAA-MM-DD&hasta=AAAA-MM-DD&detalle=1
   useEffect(() => {
     const f = searchParams.get("f");
     if (f === "pagado" || f === "pendiente" || f === "debe") setFiltro(f);
+    const p = searchParams.get("p");
+    if (p && PERIODOS.some(x => x.value === p)) setPeriodo(p as Periodo);
+    const d = searchParams.get("desde"), h = searchParams.get("hasta");
+    if (d || h) { setPeriodo("rango"); setDesde(d ?? ""); setHasta(h ?? ""); }
+    const pac = searchParams.get("pac");
+    if (pac) setPacFiltro(pac);
+    if (searchParams.get("detalle")) setVerDetalle(true);
   }, [searchParams]);
 
   const getPac = (id: string) => pacientes.find(p => p.id === id);
+  const precio = (c: Cita) => precioCita(c, getPac(c.pacienteId));
 
-  const citasFiltradas = citas
+  const [rDesde, rHasta] = rangoDe(periodo, desde, hasta);
+  // Citas dentro del periodo y del paciente elegidos (sin mirar el estado de pago)
+  const citasBase = citas.filter(c =>
+    (!rDesde || c.fecha >= rDesde) && (!rHasta || c.fecha <= rHasta) &&
+    (!pacFiltro || c.pacienteId === pacFiltro));
+
+  const citasFiltradas = citasBase
     .filter(c => filtro === "todos" || c.estadoPago === filtro)
-    .sort((a,b) => b.fecha.localeCompare(a.fecha));
+    .sort((a,b) => b.fecha.localeCompare(a.fecha) || b.hora.localeCompare(a.hora));
 
-  const totalCobrado   = citas.filter(c => c.estadoPago === "pagado").reduce((s,c)   => s + (getPac(c.pacienteId)?.sesionPrecio ?? 0), 0);
-  const totalPendiente = citas.filter(c => c.estadoPago === "pendiente").reduce((s,c) => s + (getPac(c.pacienteId)?.sesionPrecio ?? 0), 0);
-  const totalDebe      = citas.filter(c => c.estadoPago === "debe").reduce((s,c)      => s + (getPac(c.pacienteId)?.sesionPrecio ?? 0), 0);
+  const totalCobrado   = citasBase.filter(c => c.estadoPago === "pagado").reduce((s,c)    => s + precio(c), 0);
+  const totalPendiente = citasBase.filter(c => c.estadoPago === "pendiente").reduce((s,c) => s + precio(c), 0);
+  const totalDebe      = citasBase.filter(c => c.estadoPago === "debe").reduce((s,c)      => s + precio(c), 0);
+  const nCobradas      = citasBase.filter(c => c.estadoPago === "pagado").length;
+
+  // Detalle de lo cobrado por paciente en el periodo
+  const detalle = Object.values(
+    citasBase.filter(c => c.estadoPago === "pagado").reduce<Record<string, { pac: Paciente; n: number; total: number }>>((acc, c) => {
+      const pac = getPac(c.pacienteId); if (!pac) return acc;
+      acc[pac.id] ??= { pac, n: 0, total: 0 };
+      acc[pac.id].n++; acc[pac.id].total += precioCita(c, pac);
+      return acc;
+    }, {})
+  ).sort((a, b) => b.total - a.total);
+
+  const pacientesOrden = [...pacientes].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  const hayFiltros = periodo !== "todo" || pacFiltro !== "" || filtro !== "todos";
+  const pacSel = pacFiltro ? getPac(pacFiltro) : undefined;
+  const fmtEur = (n: number) => `${Math.round(n * 100) / 100} €`;
+
+  const clicTarjeta = (f: Filtro) => { setFiltro(filtro === f ? "todos" : f); if (f === "pagado") setVerDetalle(true); };
 
   return (
     <div className="p-4 md:p-8">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-5">
         <h1 className="text-xl md:text-2xl font-bold text-slate-800">Cobros</h1>
         <p className="text-slate-400 text-sm mt-0.5">Control de pagos y facturación</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6">
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 md:p-5 shadow-sm">
+      {/* Filtros de periodo y paciente */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3 md:p-4 mb-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {PERIODOS.map(({ value, label }) => (
+            <button key={value} onClick={() => setPeriodo(value)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all ${
+                periodo === value ? "bg-violet-600 text-white" : "bg-slate-50 text-slate-500 hover:text-violet-600"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+          {periodo === "rango" && (
+            <>
+              <label className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="w-10">Desde</span>
+                <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
+                  className="flex-1 min-w-0 border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-slate-700" />
+              </label>
+              <label className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="w-10">Hasta</span>
+                <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
+                  className="flex-1 min-w-0 border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-slate-700" />
+              </label>
+            </>
+          )}
+          <label className={`flex items-center gap-2 text-xs text-slate-500 ${periodo === "rango" ? "" : "md:col-span-3"}`}>
+            <span className="w-10">Paciente</span>
+            <select value={pacFiltro} onChange={e => setPacFiltro(e.target.value)}
+              className="flex-1 min-w-0 border border-slate-200 rounded-lg px-2 py-1.5 text-sm text-slate-700 bg-white">
+              <option value="">Todos los pacientes</option>
+              {pacientesOrden.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-slate-700 first-letter:uppercase truncate">
+            {tituloPeriodo(periodo, [rDesde, rHasta])}{pacSel ? ` · ${pacSel.nombre}` : ""}
+          </p>
+          {hayFiltros && (
+            <button onClick={() => { setPeriodo("todo"); setPacFiltro(""); setFiltro("todos"); setDesde(""); setHasta(""); }}
+              className="flex-shrink-0 text-xs text-violet-600 font-semibold">Quitar filtros</button>
+          )}
+        </div>
+      </div>
+
+      {/* Stats (se pueden pulsar) */}
+      <div className="grid grid-cols-3 gap-3 md:gap-4 mb-4">
+        <button onClick={() => clicTarjeta("pagado")}
+          className={`text-left bg-white rounded-2xl border p-4 md:p-5 shadow-sm transition-all ${filtro === "pagado" ? "border-emerald-300 ring-2 ring-emerald-100" : "border-slate-100 hover:border-emerald-200"}`}>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Cobrado</p>
             <div className="w-8 h-8 bg-emerald-50 rounded-xl flex items-center justify-center">
               <TrendingUp className="w-4 h-4 text-emerald-500" />
             </div>
           </div>
-          <p className="text-xl md:text-2xl font-bold text-emerald-600">{totalCobrado} €</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 md:p-5 shadow-sm">
+          <p className="text-xl md:text-2xl font-bold text-emerald-600">{fmtEur(totalCobrado)}</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">{nCobradas} sesi{nCobradas === 1 ? "ón" : "ones"} · ver detalle</p>
+        </button>
+        <button onClick={() => clicTarjeta("pendiente")}
+          className={`text-left bg-white rounded-2xl border p-4 md:p-5 shadow-sm transition-all ${filtro === "pendiente" ? "border-amber-300 ring-2 ring-amber-100" : "border-slate-100 hover:border-amber-200"}`}>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Pendiente</p>
             <div className="w-8 h-8 bg-amber-50 rounded-xl flex items-center justify-center">
               <Clock className="w-4 h-4 text-amber-500" />
             </div>
           </div>
-          <p className="text-xl md:text-2xl font-bold text-amber-600">{totalPendiente} €</p>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 md:p-5 shadow-sm">
+          <p className="text-xl md:text-2xl font-bold text-amber-600">{fmtEur(totalPendiente)}</p>
+        </button>
+        <button onClick={() => clicTarjeta("debe")}
+          className={`text-left bg-white rounded-2xl border p-4 md:p-5 shadow-sm transition-all ${filtro === "debe" ? "border-red-300 ring-2 ring-red-100" : "border-slate-100 hover:border-red-200"}`}>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Debe</p>
             <div className="w-8 h-8 bg-red-50 rounded-xl flex items-center justify-center">
               <TrendingDown className="w-4 h-4 text-red-500" />
             </div>
           </div>
-          <p className="text-xl md:text-2xl font-bold text-red-600">{totalDebe} €</p>
-        </div>
+          <p className="text-xl md:text-2xl font-bold text-red-600">{fmtEur(totalDebe)}</p>
+        </button>
       </div>
+
+      {/* Detalle de lo cobrado por paciente */}
+      {verDetalle && filtro === "pagado" && (
+        <div className="bg-white rounded-2xl border border-emerald-100 shadow-sm mb-4 overflow-hidden">
+          <div className="flex items-center justify-between px-4 md:px-5 py-3 border-b border-slate-100 bg-emerald-50/50">
+            <p className="text-sm font-semibold text-slate-700">Cobrado por paciente</p>
+            <button onClick={() => setVerDetalle(false)} className="text-xs text-slate-400 hover:text-slate-600">Ocultar</button>
+          </div>
+          {detalle.length === 0 ? (
+            <p className="text-center text-slate-400 py-8 text-sm">No hay cobros en este periodo</p>
+          ) : (
+            <ul className="divide-y divide-slate-50">
+              {detalle.map(({ pac, n, total }) => (
+                <li key={pac.id}>
+                  <button onClick={() => setPacFiltro(pacFiltro === pac.id ? "" : pac.id)}
+                    className={`w-full flex items-center gap-3 px-4 md:px-5 py-2.5 text-left hover:bg-slate-50 ${pacFiltro === pac.id ? "bg-violet-50" : ""}`}>
+                    <div className={`w-7 h-7 rounded-full ${pac.color} flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0`}>
+                      {pac.nombre.split(" ").map(x => x[0]).join("").slice(0,2)}
+                    </div>
+                    <span className="flex-1 min-w-0 truncate text-sm text-slate-700">{pac.nombre}</span>
+                    <span className="text-xs text-slate-400 flex-shrink-0">{n} sesi{n === 1 ? "ón" : "ones"}</span>
+                    <span className="w-20 text-right text-sm font-bold text-emerald-600 flex-shrink-0">{fmtEur(total)}</span>
+                  </button>
+                </li>
+              ))}
+              <li className="flex items-center justify-between px-4 md:px-5 py-3 bg-slate-50">
+                <span className="text-sm font-semibold text-slate-600">Total · {nCobradas} sesi{nCobradas === 1 ? "ón" : "ones"}</span>
+                <span className="text-sm font-bold text-slate-800">{fmtEur(totalCobrado)}</span>
+              </li>
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
@@ -104,7 +263,7 @@ function CobrosContent() {
             }`}>
             {label}
             <span className="ml-1.5 text-xs opacity-70">
-              ({citas.filter(c => value === "todos" || c.estadoPago === value).length})
+              ({citasBase.filter(c => value === "todos" || c.estadoPago === value).length})
             </span>
           </button>
         ))}
@@ -157,7 +316,7 @@ function CobrosContent() {
                     </div>
                   </td>
                   <td className="px-4 py-4 text-right">
-                    <span className="text-sm font-bold text-slate-800">{pac.sesionPrecio} €</span>
+                    <span className={`text-sm font-bold ${cita.precio != null ? "text-violet-700" : "text-slate-800"}`}>{precio(cita)} €</span>
                   </td>
                   <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-2">
@@ -205,7 +364,7 @@ function CobrosContent() {
                   <p className="text-xs text-slate-400 mt-0.5">{fmtFecha(cita.fecha)} · {cita.hora}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="font-bold text-slate-800">{pac.sesionPrecio} €</p>
+                  <p className={`font-bold ${cita.precio != null ? "text-violet-700" : "text-slate-800"}`}>{precio(cita)} €</p>
                   <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full mt-1 ${conf.color}`}>
                     <Icon className="w-3 h-3" />{conf.label}
                   </span>
@@ -309,7 +468,7 @@ function CobrosContent() {
                                 </div>
                               </td>
                               <td className="px-4 py-4 text-center text-sm text-slate-600">{cs.length}</td>
-                              <td className="px-4 py-4 text-right font-bold text-slate-800">{cs.length * paciente.sesionPrecio} €</td>
+                              <td className="px-4 py-4 text-right font-bold text-slate-800">{cs.reduce((s, c) => s + precioCita(c, paciente), 0)} €</td>
                               <td className="px-6 py-4 text-center">
                                 <button
                                   onClick={() => setFacturaMensual({ paciente, citas: cs, periodo: p, numero })}
@@ -332,7 +491,7 @@ function CobrosContent() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-slate-800 text-sm">{paciente.nombre}</p>
-                            <p className="text-xs text-slate-400 mt-0.5">{cs.length} sesión{cs.length !== 1 ? "es" : ""} · {cs.length * paciente.sesionPrecio} €</p>
+                            <p className="text-xs text-slate-400 mt-0.5">{cs.length} sesión{cs.length !== 1 ? "es" : ""} · {cs.reduce((s, c) => s + precioCita(c, paciente), 0)} €</p>
                           </div>
                           <button
                             onClick={() => setFacturaMensual({ paciente, citas: cs, periodo: p, numero })}

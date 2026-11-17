@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Printer, X, Brain } from "lucide-react";
-import { useApp } from "@/lib/store";
+import { useApp, precioCita, fmtImporte } from "@/lib/store";
 import type { Cita } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 
@@ -102,7 +102,7 @@ function buildPrintHTML(
           <p style="margin:2px 0 0;font-size:10px;color:#64748b">${fechaCita} · ${cita.hora}h${cita.notas ? ` · ${cita.notas}` : ""}</p>
         </td>
         <td style="padding:8px 6px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:11px;color:#475569;white-space:nowrap">${cita.duracion} min</td>
-        <td style="padding:8px 0;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;color:#1e293b;font-size:11px">${pac.sesionPrecio} €</td>
+        <td style="padding:8px 0;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;color:#1e293b;font-size:11px">${fmtImporte(pac.sesionPrecio)} €</td>
       </tr>
     </tbody>
   </table>
@@ -112,7 +112,7 @@ function buildPrintHTML(
     <div style="width:220px">
       <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569">
         <span>Subtotal</span>
-        <span>${pac.sesionPrecio} €</span>
+        <span>${fmtImporte(pac.sesionPrecio)} €</span>
       </div>
       <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569;border-bottom:1px solid #f1f5f9">
         <span>IVA (0%)</span>
@@ -120,7 +120,7 @@ function buildPrintHTML(
       </div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:700;font-size:14px;color:#1e293b">
         <span>Total</span>
-        <span style="color:#7c3aed">${pac.sesionPrecio},00 €</span>
+        <span style="color:#7c3aed">${fmtImporte(pac.sesionPrecio)} €</span>
       </div>
     </div>
   </div>
@@ -131,7 +131,9 @@ function buildPrintHTML(
 export default function FacturaModal({ cita, onClose }: Props) {
   const { pacientes } = useApp();
   const supabase = createClient();
-  const pac = pacientes.find(p => p.id === cita.pacienteId);
+  const pacFicha = pacientes.find(p => p.id === cita.pacienteId);
+  // En la factura, el importe es el de esta cita (puede tener un precio especial)
+  const pac = pacFicha ? { ...pacFicha, sesionPrecio: precioCita(cita, pacFicha) } : undefined;
   const [terapeuta, setTerapeuta] = useState({
     nombre: "", email: "", telefono: "", cifNif: "", colegiado: "", direccionFacturacion: "",
   });
@@ -255,7 +257,7 @@ export default function FacturaModal({ cita, onClose }: Props) {
                   <p className="text-sm text-slate-500 mt-0.5">{fechaCita} · {cita.hora}h{cita.notas ? ` · ${cita.notas}` : ""}</p>
                 </td>
                 <td className="py-4 text-center text-sm text-slate-600">{cita.duracion} min</td>
-                <td className="py-4 text-right font-semibold text-slate-800">{pac.sesionPrecio} €</td>
+                <td className="py-4 text-right font-semibold text-slate-800">{fmtImporte(pac.sesionPrecio)} €</td>
               </tr>
             </tbody>
           </table>
@@ -265,7 +267,7 @@ export default function FacturaModal({ cita, onClose }: Props) {
             <div className="w-64">
               <div className="flex justify-between py-2 text-sm text-slate-600">
                 <span>Subtotal</span>
-                <span>{pac.sesionPrecio} €</span>
+                <span>{fmtImporte(pac.sesionPrecio)} €</span>
               </div>
               <div className="flex justify-between py-2 text-sm text-slate-600 border-b border-slate-100">
                 <span>IVA (0%)</span>
@@ -273,7 +275,7 @@ export default function FacturaModal({ cita, onClose }: Props) {
               </div>
               <div className="flex justify-between py-3 font-bold text-slate-800 text-lg">
                 <span>Total</span>
-                <span className="text-violet-600">{pac.sesionPrecio},00 €</span>
+                <span className="text-violet-600">{fmtImporte(pac.sesionPrecio)} €</span>
               </div>
             </div>
           </div>

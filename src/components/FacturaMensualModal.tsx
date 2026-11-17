@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Printer, X } from "lucide-react";
 import type { Paciente, Cita } from "@/lib/store";
+import { precioCita, fmtImporte } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 
 interface Props {
@@ -70,7 +71,7 @@ function buildPrintHTML(
         <p style="margin:0;font-weight:600;color:#1e293b;font-size:11px">Sesión ${i + 1}${c.notas ? ` · ${c.notas}` : ""}</p>
       </td>
       <td style="padding:5px 6px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:11px;color:#475569;white-space:nowrap">${fmtFechaCorta(c.fecha)} ${c.hora}h</td>
-      <td style="padding:5px 0;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;color:#1e293b;font-size:11px">${paciente.sesionPrecio} €</td>
+      <td style="padding:5px 0;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600;color:#1e293b;font-size:11px">${fmtImporte(precioCita(c, paciente))} €</td>
     </tr>`).join("");
 
   return `<!DOCTYPE html>
@@ -140,8 +141,8 @@ function buildPrintHTML(
   <div style="display:flex;justify-content:flex-end">
     <div style="width:220px">
       <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569">
-        <span>${totalSesiones} sesión${totalSesiones !== 1 ? "es" : ""} × ${paciente.sesionPrecio} €</span>
-        <span>${totalImporte} €</span>
+        <span>${totalSesiones} sesión${totalSesiones !== 1 ? "es" : ""}${citasOrdenadas.every(c => precioCita(c, paciente) === paciente.sesionPrecio) ? ` × ${paciente.sesionPrecio} €` : ""}</span>
+        <span>${fmtImporte(totalImporte)} €</span>
       </div>
       <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:11px;color:#475569;border-bottom:1px solid #f1f5f9">
         <span>IVA (0%)</span>
@@ -149,7 +150,7 @@ function buildPrintHTML(
       </div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:700;font-size:14px;color:#1e293b">
         <span>Total</span>
-        <span style="color:#7c3aed">${totalImporte},00 €</span>
+        <span style="color:#7c3aed">${fmtImporte(totalImporte)} €</span>
       </div>
     </div>
   </div>
@@ -182,7 +183,8 @@ export default function FacturaMensualModal({ paciente, citas, periodo, numero, 
   const citasOrdenadas = [...citas].sort((a, b) => a.fecha.localeCompare(b.fecha));
   const ultimaCita = citasOrdenadas[citasOrdenadas.length - 1];
   const totalSesiones = citas.length;
-  const totalImporte = totalSesiones * paciente.sesionPrecio;
+  const totalImporte = citas.reduce((s, c) => s + precioCita(c, paciente), 0);
+  const precioUnico = citas.every(c => precioCita(c, paciente) === paciente.sesionPrecio);
 
   const numFac = numFactura(periodo, numero);
   const mesLabel = periodoLabel(periodo);
@@ -272,7 +274,7 @@ export default function FacturaMensualModal({ paciente, citas, periodo, numero, 
                     <p className="text-xs text-slate-400 mt-0.5">{cita.hora}h{cita.notas ? ` · ${cita.notas}` : ""}</p>
                   </td>
                   <td className="py-3 text-center text-sm text-slate-600 whitespace-nowrap">{fmtFechaCorta(cita.fecha)}</td>
-                  <td className="py-3 text-right font-semibold text-slate-800">{paciente.sesionPrecio} €</td>
+                  <td className="py-3 text-right font-semibold text-slate-800">{fmtImporte(precioCita(cita, paciente))} €</td>
                 </tr>
               ))}
             </tbody>
@@ -281,8 +283,8 @@ export default function FacturaMensualModal({ paciente, citas, periodo, numero, 
           <div className="flex justify-end">
             <div className="w-64">
               <div className="flex justify-between py-2 text-sm text-slate-600">
-                <span>{totalSesiones} sesión{totalSesiones !== 1 ? "es" : ""} × {paciente.sesionPrecio} €</span>
-                <span>{totalImporte} €</span>
+                <span>{totalSesiones} sesión{totalSesiones !== 1 ? "es" : ""}{precioUnico ? ` × ${paciente.sesionPrecio} €` : ""}</span>
+                <span>{fmtImporte(totalImporte)} €</span>
               </div>
               <div className="flex justify-between py-2 text-sm text-slate-600 border-b border-slate-100">
                 <span>IVA (0%)</span>
@@ -290,7 +292,7 @@ export default function FacturaMensualModal({ paciente, citas, periodo, numero, 
               </div>
               <div className="flex justify-between py-3 font-bold text-slate-800 text-lg">
                 <span>Total</span>
-                <span className="text-violet-600">{totalImporte},00 €</span>
+                <span className="text-violet-600">{fmtImporte(totalImporte)} €</span>
               </div>
             </div>
           </div>

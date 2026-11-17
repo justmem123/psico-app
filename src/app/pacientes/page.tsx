@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Search, Plus, Phone, Mail, CalendarDays, CreditCard, ChevronRight, MapPin, CreditCard as IdCard, Pencil, Download, Send, Sparkles, ShieldCheck, Cake } from "lucide-react";
-import { useApp } from "@/lib/store";
+import { useApp, precioCita } from "@/lib/store";
 import type { Paciente } from "@/lib/store";
 import NuevoPacienteModal from "@/components/NuevoPacienteModal";
 import EditarPacienteModal from "@/components/EditarPacienteModal";
@@ -46,8 +46,8 @@ export default function PacientesPage() {
   const filtrados        = pacientes.filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()));
   const pacienteActivo   = seleccionado ? pacientes.find(p => p.id === seleccionado) : null;
   const citasPaciente    = seleccionado ? citas.filter(c => c.pacienteId === seleccionado).sort((a,b) => b.fecha.localeCompare(a.fecha)) : [];
-  const totalCobrado     = citasPaciente.filter(c => c.estadoPago === "pagado").reduce((s,_) => s + (pacienteActivo?.sesionPrecio ?? 0), 0);
-  const totalPendiente   = citasPaciente.filter(c => c.estadoPago !== "pagado").reduce((s,_) => s + (pacienteActivo?.sesionPrecio ?? 0), 0);
+  const totalCobrado     = citasPaciente.filter(c => c.estadoPago === "pagado").reduce((s,c) => s + precioCita(c, pacienteActivo), 0);
+  const totalPendiente   = citasPaciente.filter(c => c.estadoPago !== "pagado").reduce((s,c) => s + precioCita(c, pacienteActivo), 0);
 
   return (
     <div className="p-4 md:p-8">
@@ -188,7 +188,7 @@ export default function PacientesPage() {
                       <div className="flex-1" />
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${estadoCitaColor[cita.estado]}`}>{cita.estado}</span>
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${estadoPagoColor[cita.estadoPago]}`}>
-                        {cita.estadoPago === "pagado" ? `${pacienteActivo.sesionPrecio} €` : cita.estadoPago}
+                        {cita.estadoPago === "pagado" ? `${precioCita(cita, pacienteActivo)} €` : cita.estadoPago}
                       </span>
                     </div>
                   ))}

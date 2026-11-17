@@ -33,6 +33,15 @@ export interface Cita {
   estado:      EstadoCita;
   estadoPago:  EstadoPago;
   notas?:      string;
+  precio?:     number | null;   // importe de esta cita; null = el precio de la ficha del paciente
+}
+
+/** Importe de una cita: el suyo propio si se cambió a mano; si no, el de la ficha del paciente. */
+/** Importe con dos decimales y coma: 40 → "40,00". */
+export const fmtImporte = (n: number) => n.toFixed(2).replace(".", ",");
+
+export function precioCita(c: Pick<Cita, "precio">, pac?: { sesionPrecio: number } | null): number {
+  return c.precio ?? pac?.sesionPrecio ?? 0;
 }
 
 interface AppState {
@@ -94,6 +103,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       id: c.id, pacienteId: c.paciente_id, fecha: c.fecha,
       hora: c.hora.slice(0,5), duracion: c.duracion,
       estado: c.estado, estadoPago: c.estado_pago, notas: c.notas ?? "",
+      precio: c.precio ?? null,
     })));
     setLoading(false);
   }, []);
@@ -177,6 +187,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (changes.hora       !== undefined) dbChanges.hora        = changes.hora;
     if (changes.fecha      !== undefined) dbChanges.fecha       = changes.fecha;
     if (changes.duracion   !== undefined) dbChanges.duracion    = changes.duracion;
+    if (changes.precio     !== undefined) dbChanges.precio      = changes.precio;
     await supabase.from("citas").update(dbChanges).eq("id", citaId);
     setCitas(prev => prev.map(c => c.id === citaId ? { ...c, ...changes } : c));
   }

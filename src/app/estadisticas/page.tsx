@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useApp } from "@/lib/store";
+import { useRouter } from "next/navigation";
+import { useApp, precioCita } from "@/lib/store";
 import { TrendingUp, TrendingDown, Users, CalendarDays, XCircle, Clock, CheckCircle, AlertCircle } from "lucide-react";
 
 type Periodo = "mes_actual" | "mes_pasado" | "3_meses" | "6_meses" | "año_actual" | "todo";
@@ -44,6 +45,8 @@ function getRangoFechas(periodo: Periodo): { desde: Date; hasta: Date } {
 export default function EstadisticasPage() {
   const { citas, pacientes } = useApp();
   const [periodo, setPeriodo] = useState<Periodo>("mes_actual");
+  const router = useRouter();
+  const isoD = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   const { desde, hasta } = getRangoFechas(periodo);
 
@@ -57,11 +60,11 @@ export default function EstadisticasPage() {
   // ── KPIs ────────────────────────────────────────────────────────
   const ingresosCobrados = citasPeriodo
     .filter(c => c.estadoPago === "pagado")
-    .reduce((s,c) => s + (pacientes.find(p => p.id === c.pacienteId)?.sesionPrecio ?? 0), 0);
+    .reduce((s,c) => s + precioCita(c, pacientes.find(p => p.id === c.pacienteId)), 0);
 
   const ingresosPendientes = citasPeriodo
     .filter(c => c.estadoPago === "pendiente")
-    .reduce((s,c) => s + (pacientes.find(p => p.id === c.pacienteId)?.sesionPrecio ?? 0), 0);
+    .reduce((s,c) => s + precioCita(c, pacientes.find(p => p.id === c.pacienteId)), 0);
 
   const sesionesRealizadas = citasPeriodo.filter(c => c.estado === "confirmada").length;
   const sesionesCanceladas = citasPeriodo.filter(c => c.estado === "cancelada" || c.estado === "falta").length;
@@ -81,8 +84,8 @@ export default function EstadisticasPage() {
         const d = new Date(c.fecha + "T00:00:00");
         return d.getMonth() === mes && d.getFullYear() === año && c.estadoPago === "pagado";
       })
-      .reduce((s,c) => s + (pacientes.find(p => p.id === c.pacienteId)?.sesionPrecio ?? 0), 0);
-    return { label, total };
+      .reduce((s,c) => s + precioCita(c, pacientes.find(p => p.id === c.pacienteId)), 0);
+    return { label, total, desde: isoD(new Date(año, mes, 1)), hasta: isoD(new Date(año, mes + 1, 0)) };
   });
   const maxIngreso = Math.max(...ingresosPorMes.map(m => m.total), 1);
 
@@ -101,8 +104,8 @@ export default function EstadisticasPage() {
     .map(p => ({
       ...p,
       sesiones:  citasPeriodo.filter(c => c.pacienteId === p.id && c.estado === "confirmada").length,
-      ingresos:  citasPeriodo.filter(c => c.pacienteId === p.id && c.estadoPago === "pagado").length * p.sesionPrecio,
-      pendiente: citasPeriodo.filter(c => c.pacienteId === p.id && c.estadoPago === "pendiente").length * p.sesionPrecio,
+      ingresos:  citasPeriodo.filter(c => c.pacienteId === p.id && c.estadoPago === "pagado").reduce((s, c) => s + precioCita(c, p), 0),
+      pendiente: citasPeriodo.filter(c => c.pacienteId === p.id && c.estadoPago === "pendiente").reduce((s, c) => s + precioCita(c, p), 0),
     }))
     .filter(p => p.sesiones > 0 || p.pendiente > 0)
     .sort((a,b) => b.sesiones - a.sesiones)
@@ -113,7 +116,7 @@ export default function EstadisticasPage() {
     .map(p => ({
       ...p,
       monto: citas.filter(c => c.pacienteId === p.id && c.estadoPago === "pendiente")
-                  .length * p.sesionPrecio,
+                  .reduce((s, c) => s + precioCita(c, p), 0),
       citas: citas.filter(c => c.pacienteId === p.id && c.estadoPago === "pendiente").length,
     }))
     .filter(p => p.monto > 0)
@@ -212,15 +215,16 @@ export default function EstadisticasPage() {
         <div className="bg-white rounded-2xl border border-slate-100 p-5">
           <p className="text-sm font-semibold text-slate-700 mb-4">Ingresos cobrados — últimos 6 meses</p>
           <div className="flex items-end gap-2 h-32">
-            {ingresosPorMes.map(({ label, total }) => (
-              <div key={label} className="flex-1 flex flex-col items-center gap-1">
+            {ingresosPorMes.map(({ label, total, desde: d1, hasta: d2 }) => (
+              <button key={label} title="Ver el detalle en Cobros" onClick={() => router.push(`/cobros?f=pagado&desde=${d1}&hasta=${d2}&detalle=1`)}
+                className="flex-1 flex flex-col items-center gap-1 hover:opacity-80">
                 <p className="text-xs font-semibold text-slate-600">{total > 0 ? `${total}€` : ""}</p>
                 <div className="w-full bg-slate-100 rounded-t-lg relative" style={{ height: "80px" }}>
                   <div className="absolute bottom-0 left-0 right-0 bg-violet-500 rounded-t-lg transition-all"
                     style={{ height: `${(total / maxIngreso) * 80}px` }} />
                 </div>
                 <p className="text-xs text-slate-400">{label}</p>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -256,7 +260,8 @@ export default function EstadisticasPage() {
               <p className="text-center text-slate-400 py-10 text-sm">Sin datos en este período</p>
             )}
             {topPacientes.map(p => (
-              <div key={p.id} className="flex items-center gap-3 px-5 py-3">
+              <button key={p.id} onClick={() => router.push(`/cobros?pac=${p.id}&desde=${isoD(desde)}&hasta=${isoD(hasta)}`)}
+                className="w-full text-left flex items-center gap-3 px-5 py-3 hover:bg-slate-50">
                 <div className={`w-8 h-8 rounded-full ${p.color} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}>
                   {p.nombre.split(" ").map(n => n[0]).join("").slice(0,2)}
                 </div>
@@ -268,7 +273,7 @@ export default function EstadisticasPage() {
                   <p className="text-sm font-bold text-emerald-600">{p.ingresos} €</p>
                   {p.pendiente > 0 && <p className="text-xs text-amber-500">{p.pendiente} € pdte.</p>}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

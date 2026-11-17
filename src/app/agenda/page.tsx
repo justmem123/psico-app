@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, CalendarDays } from "lucide-react";
-import { useApp } from "@/lib/store";
+import { useApp, precioCita } from "@/lib/store";
 import NuevaCitaModal from "@/components/NuevaCitaModal";
 import CitaDetailModal from "@/components/CitaDetailModal";
 
@@ -181,7 +181,7 @@ export default function AgendaPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-sm truncate">{pac.nombre}</p>
-                            <p className="text-xs opacity-60">{cita.hora} · {cita.duracion} min · {pac.sesionPrecio} €</p>
+                            <p className="text-xs opacity-60">{cita.hora} · {cita.duracion} min · {precioCita(cita, pac)} €</p>
                           </div>
                         </div>
                       );

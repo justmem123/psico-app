@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Phone, Mail, Clock, Calendar, Euro, FileText, Trash2, CheckCircle, XCircle, HelpCircle, Loader2, Pencil } from "lucide-react";
+import { Phone, Mail, Clock, Calendar, Euro, Check, X, FileText, Trash2, CheckCircle, XCircle, HelpCircle, Loader2, Pencil } from "lucide-react";
 import Modal from "./ui/Modal";
 import FacturaModal from "./FacturaModal";
-import { useApp } from "@/lib/store";
+import { useApp, precioCita } from "@/lib/store";
 import type { Cita, EstadoCita, EstadoPago } from "@/lib/store";
 
 interface Props {
@@ -38,6 +38,8 @@ export default function CitaDetailModal({ citaId, onClose }: Props) {
   const [deleting,  setDeleting]  = useState(false);
   const [confirm,   setConfirm]   = useState(false);
   const [factura,   setFactura]   = useState(false);
+  const [editPrecio, setEditPrecio] = useState(false);
+  const [precioTxt,  setPrecioTxt]  = useState("");
   const [editando,  setEditando]  = useState(false);
   const [editFecha, setEditFecha] = useState("");
   const [editHora,  setEditHora]  = useState("");
@@ -51,6 +53,7 @@ export default function CitaDetailModal({ citaId, onClose }: Props) {
       setEditFecha(cita.fecha);
       setEditHora(cita.hora);
       setEditDur(String(cita.duracion));
+      setEditPrecio(false);
     }
   }, [cita]);
 
@@ -128,11 +131,43 @@ export default function CitaDetailModal({ citaId, onClose }: Props) {
           <p className="text-sm font-semibold text-slate-700">{cita.hora}</p>
           <p className="text-xs text-slate-400">{cita.duracion} min</p>
         </div>
-        <div className="bg-slate-50 rounded-xl p-3 text-center">
-          <Euro className="w-4 h-4 text-slate-400 mx-auto mb-1" />
-          <p className="text-sm font-semibold text-slate-700">{pac.sesionPrecio} €</p>
-          <p className="text-xs text-slate-400">sesión</p>
-        </div>
+        {!editPrecio ? (
+          <button onClick={() => { setPrecioTxt(String(precioCita(cita, pac))); setEditPrecio(true); }}
+            title="Cambiar el precio solo de esta cita"
+            className="bg-slate-50 rounded-xl p-3 text-center hover:bg-violet-50 transition-colors group">
+            <Euro className="w-4 h-4 text-slate-400 mx-auto mb-1" />
+            <p className={`text-sm font-semibold ${cita.precio != null ? "text-violet-700" : "text-slate-700"}`}>{precioCita(cita, pac)} €</p>
+            <p className="text-xs text-slate-400 group-hover:text-violet-600 flex items-center justify-center gap-1">
+              {cita.precio != null ? "precio especial" : "sesión"} <Pencil className="w-3 h-3" />
+            </p>
+          </button>
+        ) : (
+          <div className="bg-violet-50 rounded-xl p-2 text-center">
+            <p className="text-[11px] text-slate-500 mb-1">Precio de esta cita</p>
+            <div className="flex items-center gap-1">
+              <input type="number" inputMode="decimal" step="any" min={0} autoFocus value={precioTxt}
+                onChange={e => setPrecioTxt(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") (e.currentTarget.parentElement?.querySelector("[data-ok]") as HTMLButtonElement | null)?.click(); }}
+                className="w-full min-w-0 border border-violet-200 rounded-lg px-1.5 py-1 text-sm text-center bg-white" />
+              <span className="text-sm text-slate-500">€</span>
+            </div>
+            <div className="flex gap-1 mt-1.5">
+              <button data-ok aria-label="Guardar precio" onClick={async () => {
+                  const n = parseFloat(precioTxt.replace(",", "."));
+                  if (isNaN(n) || n < 0) return;
+                  await updateCita(cita.id, { precio: n === pac.sesionPrecio ? null : n });
+                  setEditPrecio(false);
+                }}
+                className="flex-1 bg-violet-600 text-white rounded-md py-1 flex justify-center"><Check className="w-3.5 h-3.5" /></button>
+              <button aria-label="Cancelar" onClick={() => setEditPrecio(false)}
+                className="flex-1 bg-white border border-slate-200 text-slate-500 rounded-md py-1 flex justify-center"><X className="w-3.5 h-3.5" /></button>
+            </div>
+            {cita.precio != null && (
+              <button onClick={async () => { await updateCita(cita.id, { precio: null }); setEditPrecio(false); }}
+                className="mt-1 text-[11px] text-violet-600 underline">Volver a {pac.sesionPrecio} € (ficha)</button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Editar fecha/hora/duración */}

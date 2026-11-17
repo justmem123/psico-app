@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useApp } from "@/lib/store";
+import { useApp, precioCita } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import CitaDetailModal from "@/components/CitaDetailModal";
 import { CalendarDays, Users, CreditCard, TrendingUp, Clock, CheckCircle, AlertCircle, XCircle, Loader2, UserX, ArrowUpRight } from "lucide-react";
@@ -40,10 +40,10 @@ export default function Dashboard() {
 
   const ingresosMes = citasMes
     .filter(c => c.estadoPago === "pagado")
-    .reduce((s,c) => s + (pacientes.find(p => p.id === c.pacienteId)?.sesionPrecio ?? 0), 0);
+    .reduce((s,c) => s + precioCita(c, pacientes.find(p => p.id === c.pacienteId)), 0);
 
   const totalDebe = citas.filter(c => c.estadoPago === "debe")
-    .reduce((s,c) => s + (pacientes.find(p => p.id === c.pacienteId)?.sesionPrecio ?? 0), 0);
+    .reduce((s,c) => s + precioCita(c, pacientes.find(p => p.id === c.pacienteId)), 0);
 
   const proximaCita = citas
     .filter(c => c.fecha > hoyStr || (c.fecha === hoyStr && c.hora > ahora.toTimeString().slice(0,5)))
@@ -82,7 +82,7 @@ export default function Dashboard() {
         {[
           { label: "Citas hoy",         value: citasHoy.length,      icon: CalendarDays, color: "text-violet-600", bg: "bg-violet-50",  href: "/agenda"           },
           { label: "Pacientes activos", value: pacientes.length,      icon: Users,        color: "text-sky-600",    bg: "bg-sky-50",     href: "/pacientes"        },
-          { label: "Ingresos este mes", value: `${ingresosMes} €`,    icon: TrendingUp,   color: "text-emerald-600",bg: "bg-emerald-50", href: "/cobros?f=pagado"  },
+          { label: "Ingresos este mes", value: `${ingresosMes} €`,    icon: TrendingUp,   color: "text-emerald-600",bg: "bg-emerald-50", href: "/cobros?f=pagado&p=mes&detalle=1" },
           { label: "Cobros pendientes", value: pendientesPago.length, icon: CreditCard,   color: "text-amber-600",  bg: "bg-amber-50",   href: "/cobros?f=pendiente"},
         ].map(({ label, value, icon: Icon, color, bg, href }) => (
           <button key={label} onClick={() => router.push(href)}
@@ -140,7 +140,7 @@ export default function Dashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-slate-800 text-sm truncate">{pac.nombre}</p>
-                    <p className="text-xs text-slate-400">{cita.hora} · {cita.duracion} min · {pac.sesionPrecio} €</p>
+                    <p className="text-xs text-slate-400">{cita.hora} · {cita.duracion} min · {precioCita(cita, pac)} €</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1 ${est.color}`}>
@@ -177,7 +177,7 @@ export default function Dashboard() {
                     <p className="text-xs text-slate-400">{cita.fecha} · {cita.hora}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-slate-800 text-sm">{pac.sesionPrecio} €</p>
+                    <p className="font-semibold text-slate-800 text-sm">{precioCita(cita, pac)} €</p>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${pago.color}`}>{pago.label}</span>
                   </div>
                 </div>
