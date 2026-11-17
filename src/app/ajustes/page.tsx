@@ -9,7 +9,7 @@ export default function AjustesPage() {
   const supabase = createClient();
   const [form, setForm] = useState({
     nombre: "", apellidos: "", telefono: "", email: "",
-    colegiado: "", cifNif: "", direccionFacturacion: "",
+    colegiado: "", cifNif: "", direccionFacturacion: "", iban: "",
   });
   const [password, setPassword] = useState({ nueva: "", confirmar: "" });
   const [loadingPerfil, setLoadingPerfil] = useState(false);
@@ -33,6 +33,7 @@ export default function AjustesPage() {
           colegiado:            m.colegiado            ?? "",
           cifNif:               m.cifNif               ?? "",
           direccionFacturacion: m.direccionFacturacion ?? "",
+          iban:                 m.iban                 ?? "",
         });
       }
     });
@@ -47,6 +48,7 @@ export default function AjustesPage() {
         nombre: form.nombre, apellidos: form.apellidos, telefono: form.telefono,
         colegiado: form.colegiado, cifNif: form.cifNif,
         direccionFacturacion: form.direccionFacturacion,
+        iban: form.iban,
       },
     });
     if (error) setErrPerfil(error.message);
@@ -128,6 +130,14 @@ export default function AjustesPage() {
             </label>
             <input value={form.direccionFacturacion} onChange={e => set("direccionFacturacion", e.target.value)}
               placeholder="Calle, número, ciudad, CP" className={inputCls} />
+          </div>
+
+          {/* Cuenta bancaria (sale en las facturas a profesionales) */}
+          <div>
+            <label className={labelCls}>Número de cuenta (IBAN)</label>
+            <input value={form.iban} onChange={e => set("iban", e.target.value.toUpperCase())}
+              placeholder="ES00 0000 0000 0000 0000 0000" className={inputCls} />
+            <p className="text-[11px] text-slate-400 mt-1">Sale en las facturas mensuales a profesionales, para que te hagan la transferencia.</p>
           </div>
 
           {errPerfil && <p className="text-red-500 text-sm">{errPerfil}</p>}

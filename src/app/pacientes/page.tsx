@@ -92,7 +92,8 @@ export default function PacientesPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`font-semibold text-sm truncate ${activo ? "text-violet-700" : "text-slate-800"}`}>{p.nombre}
-                      {p.nuevo && <span className="ml-2 align-middle text-[10px] font-semibold uppercase tracking-wide bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full">Nuevo</span>}</p>
+                      {p.nuevo && <span className="ml-2 align-middle text-[10px] font-semibold uppercase tracking-wide bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full">Nuevo</span>}
+                      {p.profesional && <span className="ml-2 align-middle text-[10px] font-semibold uppercase tracking-wide bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full">Profesional</span>}</p>
                     <p className="text-xs text-slate-400">{nCitas} sesiones · {p.sesionPrecio} €/sesión</p>
                   </div>
                   <ChevronRight className={`w-4 h-4 flex-shrink-0 ${activo ? "text-violet-400" : "text-slate-300"}`} />

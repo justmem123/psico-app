@@ -22,6 +22,9 @@ export interface Paciente {
   consentimientoAt?:  string;
   consentimientoVersion?: string;
   nuevo?:             boolean;
+  profesional?:       boolean;   // colaboradora (p. ej. Paula): factura mensual con retención de IRPF
+  retencion?:         number;    // % de IRPF que se retiene en su factura
+  conceptoFactura?:   string;
 }
 
 export interface Cita {
@@ -98,6 +101,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       primeraTerapia: p.primera_terapia ?? null, comoConocio: p.como_conocio ?? "",
       consentimientoAt: p.consentimiento_at ?? "", consentimientoVersion: p.consentimiento_version ?? "",
       nuevo: p.nuevo ?? false,
+      profesional: p.profesional ?? false, retencion: Number(p.retencion ?? 0), conceptoFactura: p.concepto_factura ?? "",
     })));
     setCitas((cts ?? []).map(c => ({
       id: c.id, pacienteId: c.paciente_id, fecha: c.fecha,
@@ -165,6 +169,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (changes.dni         !== undefined) dbChanges.dni          = changes.dni;
     if (changes.direccion   !== undefined) dbChanges.direccion    = changes.direccion;
     if (changes.nuevo       !== undefined) dbChanges.nuevo        = changes.nuevo;
+    if (changes.profesional !== undefined) dbChanges.profesional  = changes.profesional;
+    if (changes.retencion   !== undefined) dbChanges.retencion    = changes.retencion;
+    if (changes.conceptoFactura !== undefined) dbChanges.concepto_factura = changes.conceptoFactura;
     await supabase.from("pacientes").update(dbChanges).eq("id", id);
     setPacientes(prev => prev.map(p => p.id === id ? { ...p, ...changes } : p));
   }

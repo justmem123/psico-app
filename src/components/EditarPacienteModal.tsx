@@ -11,9 +11,11 @@ interface Props {
   onClose: () => void;
 }
 
+const CONCEPTO_DEFECTO = "Honorarios por prestación de servicios como Psicóloga General Sanitaria";
+
 export default function EditarPacienteModal({ paciente, onClose }: Props) {
   const { updatePaciente } = useApp();
-  const [form, setForm] = useState({ nombre: "", email: "", telefono: "", sesionPrecio: 60, dni: "", direccion: "" });
+  const [form, setForm] = useState({ nombre: "", email: "", telefono: "", sesionPrecio: 60, dni: "", direccion: "", profesional: false, retencion: 15, conceptoFactura: "" });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -24,16 +26,19 @@ export default function EditarPacienteModal({ paciente, onClose }: Props) {
       sesionPrecio:paciente.sesionPrecio,
       dni:         paciente.dni ?? "",
       direccion:   paciente.direccion ?? "",
+      profesional: paciente.profesional ?? false,
+      retencion:   paciente.profesional ? (paciente.retencion ?? 15) : 15,
+      conceptoFactura: paciente.conceptoFactura || CONCEPTO_DEFECTO,
     });
   }, [paciente]);
 
-  const set = (k: string, v: string | number) => setForm(p => ({ ...p, [k]: v }));
+  const set = (k: string, v: string | number | boolean) => setForm(p => ({ ...p, [k]: v }));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!paciente) return;
     setSaving(true);
-    await updatePaciente(paciente.id, form);
+    await updatePaciente(paciente.id, { ...form, retencion: form.profesional ? form.retencion : 0 });
     setSaving(false);
     onClose();
   }
@@ -78,6 +83,33 @@ export default function EditarPacienteModal({ paciente, onClose }: Props) {
           <label className={labelCls}>Dirección</label>
           <input type="text" className={inputCls} placeholder="Calle, número, ciudad..."
             value={form.direccion} onChange={e => set("direccion", e.target.value)} />
+        </div>
+
+        {/* Profesional que deriva pacientes (factura mensual con retención) */}
+        <div className="rounded-xl border border-slate-200 p-3">
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input type="checkbox" className="mt-0.5 w-4 h-4 accent-violet-600" checked={form.profesional}
+              onChange={e => set("profesional", e.target.checked)} />
+            <span>
+              <span className="block text-sm font-semibold text-slate-700">Es una profesional, no un paciente</span>
+              <span className="block text-xs text-slate-400">Se le hace una factura al mes con todas las sesiones, con retención de IRPF.</span>
+            </span>
+          </label>
+          {form.profesional && (
+            <div className="mt-3 space-y-3">
+              <div className="w-32">
+                <label className={labelCls}>Retención IRPF (%)</label>
+                <input type="number" className={inputCls} min={0} max={100} step="any"
+                  value={form.retencion} onChange={e => set("retencion", parseFloat(e.target.value) || 0)} />
+              </div>
+              <div>
+                <label className={labelCls}>Concepto de la factura</label>
+                <input type="text" className={inputCls}
+                  value={form.conceptoFactura} onChange={e => set("conceptoFactura", e.target.value)} />
+                <p className="text-[11px] text-slate-400 mt-1">Se añade «en el mes de …» automáticamente.</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 pt-2">

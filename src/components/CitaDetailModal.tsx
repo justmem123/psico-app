@@ -266,7 +266,7 @@ export default function CitaDetailModal({ citaId, onClose }: Props) {
       </div>
 
       {/* Factura */}
-      {cita.estadoPago === "pagado" && (
+      {cita.estadoPago === "pagado" && !pac.profesional && (
         <div className="mb-4">
           <button onClick={() => setFactura(true)}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-violet-200 text-violet-600 text-sm font-medium hover:bg-violet-50 transition-colors">

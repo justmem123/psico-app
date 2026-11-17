@@ -7,6 +7,7 @@ import type { Cita } from "@/lib/store";
 import CitaDetailModal from "@/components/CitaDetailModal";
 import FacturaModal from "@/components/FacturaModal";
 import FacturaMensualModal from "@/components/FacturaMensualModal";
+import FacturaProfesionalModal from "@/components/FacturaProfesionalModal";
 import type { Paciente } from "@/lib/store";
 
 type Filtro = "todos" | "pendiente" | "pagado" | "debe";
@@ -81,6 +82,7 @@ function CobrosContent() {
   const [citaSelId,  setCitaSelId]  = useState<string | null>(null);
   const [facturaCita, setFacturaCita] = useState<Cita | null>(null);
   const [facturaMensual, setFacturaMensual] = useState<{ paciente: Paciente; citas: Cita[]; periodo: string; numero: number } | null>(null);
+  const [facturaProf, setFacturaProf] = useState<{ paciente: Paciente; citas: Cita[]; mes: string; numero: string } | null>(null);
 
   // Filtros desde la URL: ?f=pagado&p=mes&pac=<id>&desde=AAAA-MM-DD&hasta=AAAA-MM-DD&detalle=1
   useEffect(() => {
@@ -326,7 +328,7 @@ function CobrosContent() {
                           ✓ Cobrado
                         </button>
                       )}
-                      {cita.estadoPago === "pagado" && (
+                      {cita.estadoPago === "pagado" && !pac.profesional && (
                         <button onClick={() => setFacturaCita(cita)}
                           className="flex items-center gap-1 text-xs bg-slate-50 text-slate-600 font-semibold px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors whitespace-nowrap">
                           <FileText className="w-3 h-3" /> Factura
@@ -378,7 +380,7 @@ function CobrosContent() {
                   </button>
                 </div>
               )}
-              {cita.estadoPago === "pagado" && (
+              {cita.estadoPago === "pagado" && !pac.profesional && (
                 <div className="border-t border-slate-100 px-4 py-2.5">
                   <button onClick={() => setFacturaCita(cita)}
                     className="flex items-center justify-center gap-1.5 w-full text-xs bg-slate-50 text-slate-600 font-semibold py-2 rounded-lg hover:bg-slate-100 transition-colors">
@@ -393,7 +395,8 @@ function CobrosContent() {
 
       {/* Facturas trimestrales */}
       <div className="mt-8">
-        <h2 className="text-base font-bold text-slate-800 mb-4">Facturas por trimestre</h2>
+        <h2 className="text-base font-bold text-slate-800 mb-1">Facturas por trimestre</h2>
+        <p className="text-xs text-slate-400 mb-4">Las profesionales (como Paula) tienen una factura por mes, con su retención de IRPF.</p>
         {(() => {
           const trimestreKey = (fecha: string) => {
             const [y, m] = fecha.slice(0, 7).split("-");
@@ -412,20 +415,22 @@ function CobrosContent() {
           };
 
           // Agrupar citas pagadas por paciente + trimestre
-          const grupos: Record<string, { paciente: Paciente; citas: Cita[]; periodo: string }> = {};
+          // Pacientes: una factura por trimestre. Profesionales (p. ej. Paula): una por mes, numerada en su trimestre.
+          const grupos: Record<string, { paciente: Paciente; citas: Cita[]; periodo: string; mes?: string }> = {};
           citas
             .filter(c => c.estadoPago === "pagado")
             .forEach(c => {
               const pac = getPac(c.pacienteId);
               if (!pac) return;
               const periodo = trimestreKey(c.fecha);
-              const key = `${pac.id}-${periodo}`;
-              if (!grupos[key]) grupos[key] = { paciente: pac, citas: [], periodo };
+              const mes = pac.profesional ? c.fecha.slice(0, 7) : undefined;
+              const key = `${pac.id}-${mes ?? periodo}`;
+              if (!grupos[key]) grupos[key] = { paciente: pac, citas: [], periodo, mes };
               grupos[key].citas.push(c);
             });
 
           const lista = Object.values(grupos)
-            .sort((a, b) => a.periodo.localeCompare(b.periodo) || a.paciente.nombre.localeCompare(b.paciente.nombre))
+            .sort((a, b) => a.periodo.localeCompare(b.periodo) || a.paciente.nombre.localeCompare(b.paciente.nombre) || (a.mes ?? "").localeCompare(b.mes ?? ""))
             .map((g, i) => ({ ...g, numero: i + 1 }))
             .reverse();
 
@@ -434,6 +439,14 @@ function CobrosContent() {
               No hay sesiones pagadas
             </div>
           );
+
+          const nombreMes = (m: string) => `${MESES_LARGO[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
+          const abrirFactura = (paciente: Paciente, cs: Cita[], p: string, numero: number, mes?: string) => {
+            if (mes) {
+              const [y, t] = p.split("-");
+              setFacturaProf({ paciente, citas: cs, mes, numero: `FAC${y}-${t}-${String(numero).padStart(3, "0")}` });
+            } else setFacturaMensual({ paciente, citas: cs, periodo: p, numero });
+          };
 
           const trimestresUnicos = [...new Set(lista.map(g => g.periodo))];
 
@@ -457,21 +470,24 @@ function CobrosContent() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                          {gruposTrim.map(({ paciente, citas: cs, periodo: p, numero }) => (
+                          {gruposTrim.map(({ paciente, citas: cs, periodo: p, numero, mes }) => (
                             <tr key={`${paciente.id}-${p}`} className="hover:bg-slate-50 transition-colors">
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
                                   <div className={`w-8 h-8 rounded-full ${paciente.color} flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}>
                                     {paciente.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
                                   </div>
-                                  <p className="text-sm font-semibold text-slate-800">{paciente.nombre}</p>
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-800">{paciente.nombre}</p>
+                                    {mes && <p className="text-xs text-violet-600">Profesional · {nombreMes(mes)} · −{paciente.retencion ?? 0} % IRPF</p>}
+                                  </div>
                                 </div>
                               </td>
                               <td className="px-4 py-4 text-center text-sm text-slate-600">{cs.length}</td>
                               <td className="px-4 py-4 text-right font-bold text-slate-800">{cs.reduce((s, c) => s + precioCita(c, paciente), 0)} €</td>
                               <td className="px-6 py-4 text-center">
                                 <button
-                                  onClick={() => setFacturaMensual({ paciente, citas: cs, periodo: p, numero })}
+                                  onClick={() => abrirFactura(paciente, cs, p, numero, mes)}
                                   className="flex items-center gap-1 text-xs bg-violet-50 text-violet-600 font-semibold px-3 py-1.5 rounded-lg hover:bg-violet-100 transition-colors mx-auto whitespace-nowrap">
                                   <FileText className="w-3 h-3" /> Generar
                                 </button>
@@ -484,17 +500,18 @@ function CobrosContent() {
 
                     {/* Móvil */}
                     <div className="md:hidden space-y-3">
-                      {gruposTrim.map(({ paciente, citas: cs, periodo: p, numero }) => (
+                      {gruposTrim.map(({ paciente, citas: cs, periodo: p, numero, mes }) => (
                         <div key={`${paciente.id}-${p}`} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-full ${paciente.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
                             {paciente.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-slate-800 text-sm">{paciente.nombre}</p>
+                            {mes && <p className="text-xs text-violet-600">Profesional · {nombreMes(mes)}</p>}
                             <p className="text-xs text-slate-400 mt-0.5">{cs.length} sesión{cs.length !== 1 ? "es" : ""} · {cs.reduce((s, c) => s + precioCita(c, paciente), 0)} €</p>
                           </div>
                           <button
-                            onClick={() => setFacturaMensual({ paciente, citas: cs, periodo: p, numero })}
+                            onClick={() => abrirFactura(paciente, cs, p, numero, mes)}
                             className="flex items-center gap-1 text-xs bg-violet-50 text-violet-600 font-semibold px-3 py-2 rounded-lg hover:bg-violet-100 transition-colors whitespace-nowrap">
                             <FileText className="w-3 h-3" /> Factura
                           </button>
@@ -511,6 +528,10 @@ function CobrosContent() {
 
       <CitaDetailModal citaId={citaSelId} onClose={() => setCitaSelId(null)} />
       {facturaCita && <FacturaModal cita={facturaCita} onClose={() => setFacturaCita(null)} />}
+      {facturaProf && (
+        <FacturaProfesionalModal paciente={facturaProf.paciente} citas={facturaProf.citas}
+          mes={facturaProf.mes} numero={facturaProf.numero} onClose={() => setFacturaProf(null)} />
+      )}
       {facturaMensual && (
         <FacturaMensualModal
           paciente={facturaMensual.paciente}
