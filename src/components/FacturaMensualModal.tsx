@@ -11,6 +11,7 @@ interface Props {
   periodo: string;    // "2026-T1"
   numero: number;
   onClose: () => void;
+  onImprimir?: () => void;   // guarda el número de la factura la primera vez
 }
 
 const MESES_LARGO = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
@@ -158,7 +159,7 @@ function buildPrintHTML(
 </html>`;
 }
 
-export default function FacturaMensualModal({ paciente, citas, periodo, numero, onClose }: Props) {
+export default function FacturaMensualModal({ paciente, citas, periodo, numero, onClose, onImprimir }: Props) {
   const supabase = createClient();
   const [terapeuta, setTerapeuta] = useState<Terapeuta>({
     nombre: "", email: "", telefono: "", cifNif: "", colegiado: "", direccionFacturacion: "",
@@ -192,6 +193,7 @@ export default function FacturaMensualModal({ paciente, citas, periodo, numero, 
   const ultimaFecha = ultimaCita ? fmtFecha(ultimaCita.fecha) : "-";
 
   function imprimir() {
+    onImprimir?.();
     const html = buildPrintHTML(terapeuta, paciente, citasOrdenadas, numFac, fechaHoy, ultimaFecha, totalSesiones, totalImporte);
     const win = window.open("", "_blank", "width=800,height=900");
     if (!win) return;

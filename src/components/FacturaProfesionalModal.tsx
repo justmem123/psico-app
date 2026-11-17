@@ -13,6 +13,7 @@ interface Props {
   mes: string;        // "2026-10"
   numero: string;     // "FAC2026-T4-098"
   onClose: () => void;
+  onImprimir?: () => void;   // guarda el número de la factura la primera vez
 }
 
 const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
@@ -116,7 +117,7 @@ function buildPrintHTML(t: Terapeuta, p: Paciente, numFac: string, d: ReturnType
 </html>`;
 }
 
-export default function FacturaProfesionalModal({ paciente, citas, mes, numero, onClose }: Props) {
+export default function FacturaProfesionalModal({ paciente, citas, mes, numero, onClose, onImprimir }: Props) {
   const [t, setT] = useState<Terapeuta>({ nombre: "", email: "", telefono: "", cifNif: "", colegiado: "", direccionFacturacion: "", iban: "" });
 
   useEffect(() => {
@@ -134,6 +135,7 @@ export default function FacturaProfesionalModal({ paciente, citas, mes, numero, 
   const d = datosFacturaProfesional(paciente, citas, mes);
 
   function imprimir() {
+    onImprimir?.();
     const win = window.open("", "_blank", "width=800,height=900");
     if (!win) return;
     win.document.write(buildPrintHTML(t, paciente, numero, d));

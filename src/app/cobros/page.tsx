@@ -9,6 +9,10 @@ import FacturaModal from "@/components/FacturaModal";
 import FacturaMensualModal from "@/components/FacturaMensualModal";
 import FacturaProfesionalModal from "@/components/FacturaProfesionalModal";
 import type { Paciente } from "@/lib/store";
+import { createClient } from "@/lib/supabase/client";
+
+// Factura ya emitida: su número queda fijo (tabla facturas)
+type FacturaFija = { clave: string; numero: number; periodo: string };
 
 type Filtro = "todos" | "pendiente" | "pagado" | "debe";
 
@@ -81,8 +85,21 @@ function CobrosContent() {
   const [verDetalle, setVerDetalle] = useState(false);
   const [citaSelId,  setCitaSelId]  = useState<string | null>(null);
   const [facturaCita, setFacturaCita] = useState<Cita | null>(null);
-  const [facturaMensual, setFacturaMensual] = useState<{ paciente: Paciente; citas: Cita[]; periodo: string; numero: number } | null>(null);
-  const [facturaProf, setFacturaProf] = useState<{ paciente: Paciente; citas: Cita[]; mes: string; numero: string } | null>(null);
+  const [facturaMensual, setFacturaMensual] = useState<{ paciente: Paciente; citas: Cita[]; periodo: string; numero: number; clave: string } | null>(null);
+  const [facturaProf, setFacturaProf] = useState<{ paciente: Paciente; citas: Cita[]; mes: string; numero: string; clave: string; n: number; periodo: string } | null>(null);
+  const [fijas, setFijas] = useState<FacturaFija[] | null>(null);
+
+  useEffect(() => {
+    createClient().from("facturas").select("clave, numero, periodo")
+      .then(({ data }) => setFijas((data as FacturaFija[]) ?? []));
+  }, []);
+
+  // Al imprimir una factura por primera vez se guarda su número para que no cambie nunca
+  async function fijarFactura(clave: string, numero: number, periodo: string, pacienteId: string) {
+    if (fijas?.some(f => f.clave === clave)) return;
+    const { error } = await createClient().from("facturas").insert({ clave, numero, periodo, paciente_id: pacienteId });
+    if (!error) setFijas(prev => [...(prev ?? []), { clave, numero, periodo }]);
+  }
 
   // Filtros desde la URL: ?f=pagado&p=mes&pac=<id>&desde=AAAA-MM-DD&hasta=AAAA-MM-DD&detalle=1
   useEffect(() => {
@@ -429,10 +446,19 @@ function CobrosContent() {
               grupos[key].citas.push(c);
             });
 
-          const lista = Object.values(grupos)
+          const ordenadas = Object.values(grupos)
             .sort((a, b) => a.periodo.localeCompare(b.periodo) || a.paciente.nombre.localeCompare(b.paciente.nombre) || (a.mes ?? "").localeCompare(b.mes ?? ""))
-            .map((g, i) => ({ ...g, numero: i + 1 }))
-            .reverse();
+            .map(g => ({ ...g, clave: `${g.paciente.id}|${g.mes ?? g.periodo}` }));
+          // Las ya emitidas conservan su número; las demás toman, en orden, los números libres
+          const porClave = new Map((fijas ?? []).map(f => [f.clave, f.numero]));
+          const usados = new Set((fijas ?? []).map(f => f.numero));
+          let siguiente = 1;
+          const lista = ordenadas.map(g => {
+            const fijo = porClave.get(g.clave);
+            if (fijo !== undefined) return { ...g, numero: fijo, fija: true };
+            while (usados.has(siguiente)) siguiente++;
+            return { ...g, numero: siguiente++, fija: false };
+          }).reverse();
 
           if (lista.length === 0) return (
             <div className="bg-white rounded-2xl border border-slate-100 py-12 text-center text-slate-400 text-sm">
@@ -441,11 +467,12 @@ function CobrosContent() {
           );
 
           const nombreMes = (m: string) => `${MESES_LARGO[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
-          const abrirFactura = (paciente: Paciente, cs: Cita[], p: string, numero: number, mes?: string) => {
+          const abrirFactura = (paciente: Paciente, cs: Cita[], p: string, numero: number, mes: string | undefined, clave: string) => {
+            if (fijas === null) return;   // esperar a tener los números ya emitidos
             if (mes) {
               const [y, t] = p.split("-");
-              setFacturaProf({ paciente, citas: cs, mes, numero: `FAC${y}-${t}-${String(numero).padStart(3, "0")}` });
-            } else setFacturaMensual({ paciente, citas: cs, periodo: p, numero });
+              setFacturaProf({ paciente, citas: cs, mes, numero: `FAC${y}-${t}-${String(numero).padStart(3, "0")}`, clave, n: numero, periodo: p });
+            } else setFacturaMensual({ paciente, citas: cs, periodo: p, numero, clave });
           };
 
           const trimestresUnicos = [...new Set(lista.map(g => g.periodo))];
@@ -470,7 +497,7 @@ function CobrosContent() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                          {gruposTrim.map(({ paciente, citas: cs, periodo: p, numero, mes }) => (
+                          {gruposTrim.map(({ paciente, citas: cs, periodo: p, numero, mes, clave }) => (
                             <tr key={`${paciente.id}-${p}`} className="hover:bg-slate-50 transition-colors">
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
@@ -487,7 +514,7 @@ function CobrosContent() {
                               <td className="px-4 py-4 text-right font-bold text-slate-800">{cs.reduce((s, c) => s + precioCita(c, paciente), 0)} €</td>
                               <td className="px-6 py-4 text-center">
                                 <button
-                                  onClick={() => abrirFactura(paciente, cs, p, numero, mes)}
+                                  onClick={() => abrirFactura(paciente, cs, p, numero, mes, clave)}
                                   className="flex items-center gap-1 text-xs bg-violet-50 text-violet-600 font-semibold px-3 py-1.5 rounded-lg hover:bg-violet-100 transition-colors mx-auto whitespace-nowrap">
                                   <FileText className="w-3 h-3" /> Generar
                                 </button>
@@ -500,7 +527,7 @@ function CobrosContent() {
 
                     {/* Móvil */}
                     <div className="md:hidden space-y-3">
-                      {gruposTrim.map(({ paciente, citas: cs, periodo: p, numero, mes }) => (
+                      {gruposTrim.map(({ paciente, citas: cs, periodo: p, numero, mes, clave }) => (
                         <div key={`${paciente.id}-${p}`} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-full ${paciente.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
                             {paciente.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
@@ -511,7 +538,7 @@ function CobrosContent() {
                             <p className="text-xs text-slate-400 mt-0.5">{cs.length} sesión{cs.length !== 1 ? "es" : ""} · {cs.reduce((s, c) => s + precioCita(c, paciente), 0)} €</p>
                           </div>
                           <button
-                            onClick={() => abrirFactura(paciente, cs, p, numero, mes)}
+                            onClick={() => abrirFactura(paciente, cs, p, numero, mes, clave)}
                             className="flex items-center gap-1 text-xs bg-violet-50 text-violet-600 font-semibold px-3 py-2 rounded-lg hover:bg-violet-100 transition-colors whitespace-nowrap">
                             <FileText className="w-3 h-3" /> Factura
                           </button>
@@ -530,7 +557,8 @@ function CobrosContent() {
       {facturaCita && <FacturaModal cita={facturaCita} onClose={() => setFacturaCita(null)} />}
       {facturaProf && (
         <FacturaProfesionalModal paciente={facturaProf.paciente} citas={facturaProf.citas}
-          mes={facturaProf.mes} numero={facturaProf.numero} onClose={() => setFacturaProf(null)} />
+          mes={facturaProf.mes} numero={facturaProf.numero} onClose={() => setFacturaProf(null)}
+          onImprimir={() => fijarFactura(facturaProf.clave, facturaProf.n, facturaProf.periodo, facturaProf.paciente.id)} />
       )}
       {facturaMensual && (
         <FacturaMensualModal
@@ -539,6 +567,7 @@ function CobrosContent() {
           periodo={facturaMensual.periodo}
           numero={facturaMensual.numero}
           onClose={() => setFacturaMensual(null)}
+          onImprimir={() => fijarFactura(facturaMensual.clave, facturaMensual.numero, facturaMensual.periodo, facturaMensual.paciente.id)}
         />
       )}
     </div>
